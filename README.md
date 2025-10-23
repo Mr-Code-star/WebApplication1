@@ -1,4 +1,4 @@
-Hola este es un mini proyecto de backend con IMPLEMENTACION DE DDD
+Hola este es un mini proyecto de backend con .NET IMPLEMENTACION DE DDD
 Si quieres ejecutarlo debes tenere en cuenta lo siguiente:
 
 - Tener el MySql WorkBrech y el MySql Server descargados en tu computadora
