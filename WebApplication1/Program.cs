@@ -73,23 +73,11 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<AppDbContext>();
         
-        Console.WriteLine("🔍 Verificando migraciones pendientes...");
-        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
-        if (pendingMigrations.Any())
-        {
-            Console.WriteLine($"🔄 Aplicando {pendingMigrations.Count()} migraciones pendientes:");
-            foreach (var migration in pendingMigrations)
-            {
-                Console.WriteLine($"   - {migration}");
-            }
-            
-            await context.Database.MigrateAsync();
-            Console.WriteLine("✅ Migraciones aplicadas correctamente");
-        }
-        else
-        {
-            Console.WriteLine("✅ No hay migraciones pendientes");
-        }
+        Console.WriteLine("🔍 Verificando base de datos...");
+        
+        // ✅ ESTO SÍ CREA LA BASE DE DATOS Y TABLAS AUTOMÁTICAMENTE
+        var created = context.Database.EnsureCreated();
+        Console.WriteLine(created ? "✅ Base de datos y tablas creadas" : "✅ Base de datos ya existía");
         
         // Verificar que la tabla existe
         var tableExists = await context.Database.CanConnectAsync();
@@ -98,8 +86,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"❌ Error crítico al configurar la base de datos: {ex.Message}");
-        Console.WriteLine($"🔧 StackTrace: {ex.StackTrace}");
-        throw;
+        if (app.Environment.IsDevelopment()) throw;
     }
 }
 
