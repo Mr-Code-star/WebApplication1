@@ -29,7 +29,7 @@ public partial class FuenteFavorita
         IdFuente = comando.IdFuente;
     }
     
-    public int Id { get; } // Número único automático (como ID de base de datos)
+    public int Id { get; private set; } // Número único automático (como ID de base de datos)
     public string IdFuente { get; private set; } // Tu llave de acceso
 
     public string ClaveApiNoticias { get; private set; } // Codigo de la fuente (ej: "bbc-news")
