@@ -31,7 +31,7 @@ public class AppDbContext(DbContextOptions opciones) : DbContext(opciones)
         var e = builder.Entity<FuenteFavorita>();
 
         // Si tu tabla en MySQL se llama "FuenteFavoritas" (con mayúsculas), usa exactamente ese nombre:
-        e.ToTable("FuenteFavoritas");               // <- o "fuente_favoritas" si ese es el nombre real en tu server
+        e.ToTable("fuente_favoritas");               // <- o "fuente_favoritas" si ese es el nombre real en tu server
 
         e.HasKey(f => f.Id);
         e.Property(f => f.Id)
