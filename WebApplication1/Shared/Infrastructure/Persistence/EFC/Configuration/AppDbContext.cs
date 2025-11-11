@@ -23,14 +23,28 @@ public class AppDbContext(DbContextOptions opciones) : DbContext(opciones)
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
-        
-        // 🗂️ CONFIGURACIÓN de la entidad FuenteFavorita
-        builder.Entity<FuenteFavorita>().HasKey(f => f.Id); // 🔑 Establece ID como clave primaria
-        builder.Entity<FuenteFavorita>().Property(f => f.Id).IsRequired().ValueGeneratedOnAdd(); // ⚡ ID requerido y generado automáticamente
-        builder.Entity<FuenteFavorita>().Property(f => f.IdFuente).IsRequired(); // 📰 IdFuente requerido
-        builder.Entity<FuenteFavorita>().Property(f => f.ClaveApiNoticias).IsRequired(); // 🔑 ClaveApiNoticias requerido
-        
-        // 🐍 Aplica la convención de nombres snake_case
+
+        // 1) Aplica tu convención global (por si otras entidades la usan)
         builder.UsarConvencionNombresSerpiente();
+
+        // 2) Para FuenteFavorita, FUERZA tabla y columnas exactas que tiene tu BD
+        var e = builder.Entity<FuenteFavorita>();
+
+        // Si tu tabla en MySQL se llama "FuenteFavoritas" (con mayúsculas), usa exactamente ese nombre:
+        e.ToTable("FuenteFavoritas");               // <- o "fuente_favoritas" si ese es el nombre real en tu server
+
+        e.HasKey(f => f.Id);
+        e.Property(f => f.Id)
+            .HasColumnName("Id")
+            .IsRequired()
+            .ValueGeneratedOnAdd();
+
+        e.Property(f => f.IdFuente)
+            .HasColumnName("IdFuente")
+            .IsRequired();
+
+        e.Property(f => f.ClaveApiNoticias)
+            .HasColumnName("ClaveApiNoticias")
+            .IsRequired();
     }
 }
