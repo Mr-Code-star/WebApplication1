@@ -8,6 +8,7 @@ using WebApplication1.Shared.Domain.Repositories;
 using WebApplication1.Shared.Infrastructure.Interfaces.ASP.Configuration;
 using WebApplication1.Shared.Infrastructure.Persistence.EFC.Configuration;
 using WebApplication1.Shared.Infrastructure.Persistence.EFC.Repositories;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,13 @@ builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddControllers(options => options.Conventions.Add(new ConvencionNombresRutasKebabCase()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options => options.EnableAnnotations());
+builder.Services.AddCors(o =>
+{
+    o.AddPolicy("AllowAll", p => p
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
 
 // 🗄️ SECCIÓN 2: CONFIGURACIÓN DE BASE DE DATOS
 if (builder.Environment.IsDevelopment())
@@ -97,7 +105,12 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "News API v1");
     options.RoutePrefix = string.Empty;
 });
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
+app.UseCors("AllowAll"); 
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
