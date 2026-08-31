@@ -5,17 +5,46 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
+using WebApplication1.AchievementsRewards.Application.Internal;
+using WebApplication1.AchievementsRewards.Domain.Repositories;
+using WebApplication1.AchievementsRewards.Domain.Services;
+using WebApplication1.AchievementsRewards.Infrastructure.Persitencia.MongoDb.Repository;
+using WebApplication1.AchievementsRewards.Interfaces.Facades;
+using WebApplication1.AnalyticsReporting.Interfaces.DependencyInjection;
+using WebApplication1.Consultation.Application.Internal;
+using WebApplication1.Consultation.Domain.Repositories;
+using WebApplication1.Consultation.Domain.Servicies;
+using WebApplication1.Consultation.Infrastructure.Persitencia.MongoDb.Repository;
+using WebApplication1.Consultation.Interfaces.Facades;
 using WebApplication1.Contexts.IAM.Application.Interfaces.OutboundServices;
 using WebApplication1.Contexts.IAM.Application.Services;
 using WebApplication1.Contexts.IAM.Domain.Repositories;
 using WebApplication1.Contexts.IAM.Domain.Services;
 using WebApplication1.Contexts.IAM.Infrastructure.Security;
+using WebApplication1.HealthyFacility.Application.Services;
+using WebApplication1.HealthyFacility.Domain.Repositories;
+using WebApplication1.HealthyFacility.Domain.Services;
+using WebApplication1.HealthyFacility.Infrastructure.Persitence.MongoDb.Repositories;
+using WebApplication1.HealthyFacility.Interfaces.Facades;
 using WebApplication1.iam.infrastructure.Email;
 using WebApplication1.iam.infrastructure.Persitencia.MongoDb.Repositories;
 using WebApplication1.iam.infrastructure.tokens;
 using WebApplication1.iam.Interfaces.Facades;
+using WebApplication1.NutritionDiary.Interfaces.DependencyInjection;
+using WebApplication1.patient_management.Application.Internal;
+using WebApplication1.patient_management.Domain.Repositories;
+using WebApplication1.patient_management.Domain.Services;
+using WebApplication1.patient_management.Infrastructure.Persitencia.MongoDb.Repositoreis;
+using WebApplication1.patient_management.Interfaces.Facades;
 using WebApplication1.Services;
 using WebApplication1.shared.catalogs.Data;
+using WebApplication1.shared.infrastructure.Events;
+using WebApplication1.TreatmentTracking.Application.Internal.Scheduling;
+using WebApplication1.TreatmentTracking.Application.Internal.Services;
+using WebApplication1.TreatmentTracking.Domain.Repositories;
+using WebApplication1.TreatmentTracking.Domain.Services;
+using WebApplication1.TreatmentTracking.Infrastructure.Persitencia.MongoDb.Repositories;
+using WebApplication1.TreatmentTracking.Interfaces.Facades;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,7 +71,12 @@ builder.Services.AddScoped<IMongoDatabase>(sp =>
 });
 
 // ==========================================
-// 3. REGISTRAR SERVICIOS
+// ✅ 3. REGISTRAR EVENT PUBLISHER (SINGLETON)
+// ==========================================
+builder.Services.AddSingleton<EventPublisher>();
+
+// ==========================================
+// 1. REGISTRAR SERVICIOS IAM (Identity & Access Management)
 // ==========================================
 
 // 📌 Repositorios (Infrastructure)
@@ -67,7 +101,101 @@ builder.Services.AddSingleton<DistrictRepository>();
 builder.Services.AddHostedService<DatabaseSeeder>();
 
 // ==========================================
-// 4. CONFIGURAR CONTROLLERS
+// 2. REGISTRAR SERVICIOS ACHIEVEMENTS & REWARDS
+// ==========================================
+
+// 📌 Repositorios Achievements
+builder.Services.AddScoped<IAchievementRepository, MongoAchievementRepository>();
+builder.Services.AddScoped<IBadgeRepository, MongoBadgeRepository>();
+
+// 📌 Servicios de Aplicación Achievements
+builder.Services.AddScoped<IAchievementQueryService, AchievementQueryServiceImpl>();
+builder.Services.AddScoped<IAchievementCommandService, AchievementCommandServiceImpl>();
+
+// 📌 Event Handlers
+builder.Services.AddScoped<TreatmentEventHandlers>();
+
+// 📌 Facade Achievements
+builder.Services.AddScoped<AchievementFacade>();
+
+// ==========================================
+// 3. REGISTRAR SERVICIOS COMMUNICATION MANAGEMENT
+// ==========================================
+
+// 📌 Repositorios Communication
+builder.Services.AddScoped<IConsultationRepository, MongoConsultationRepository>();
+
+// 📌 Servicios de Aplicación Communication
+builder.Services.AddScoped<ICommunicationCommandService, CommunicationCommandServiceImpl>();
+builder.Services.AddScoped<ICommunicationQueryService, CommunicationQueryServiceImpl>();
+
+// 📌 Facade Communication
+builder.Services.AddScoped<CommunicationFacade>();
+
+// ==========================================
+// 6. REGISTRAR SERVICIOS TREATMENT TRACKING
+// ==========================================
+
+// 📌 Repositorios Treatment Tracking
+builder.Services.AddScoped<ITreatmentRepository, MongoTreatmentRepository>();
+builder.Services.AddScoped<IDailyDoseRepository, MongoDailyDoseRepository>();
+
+// 📌 Servicios de Aplicación Treatment Tracking
+builder.Services.AddScoped<ITreatmentCommandService, TreatmentCommandServiceImpl>();
+builder.Services.AddScoped<ITreatmentQueryService, TreatmentQueryServiceImpl>();
+
+// 📌 Facade Treatment Tracking
+builder.Services.AddScoped<TreatmentFacade>();
+
+builder.Services.AddHostedService<DoseEvaluationScheduler>();
+
+
+// ==========================================
+// 7. REGISTRAR SERVICIOS PATIENT MANAGEMENT
+// ==========================================
+
+// 📌 Repositorios Patient Management
+builder.Services.AddScoped<IPatientRepository, MongoPatientRepository>();
+builder.Services.AddScoped<IMedicalRecordRepository, MongoMedicalRecordRepository>();
+
+// 📌 Servicios de Aplicación Patient Management
+builder.Services.AddScoped<IPatientCommandService, PatientCommandServiceImpl>();
+builder.Services.AddScoped<IPatientQueryService, PatientQueryServiceImpl>();
+
+// 📌 Facade Patient Management
+builder.Services.AddScoped<PatientManagementFacade>();
+
+// ==========================================
+// 8. REGISTRAR SERVICIOS HEALTHY FACILITY
+// ==========================================
+
+// 📌 Repositorios Healthy Facility
+builder.Services.AddScoped<IHealthFacilityRepository, MongoHealthFacilityRepository>();
+builder.Services.AddScoped<IAppointmentRepository, MongoAppointmentRepository>();
+builder.Services.AddScoped<INurseAssignmentRepository, MongoNurseAssignmentRepository>();
+
+// 📌 Servicios de Aplicación Healthy Facility
+builder.Services.AddScoped<IHealthyFacilityCommandService, HealthFacilityCommandServiceImpl>();
+builder.Services.AddScoped<IHealthyFacilityQueryService, HealthFacilityQueryServiceImpl>();
+
+// 📌 Facade Healthy Facility
+builder.Services.AddScoped<HealthFacilityFacade>();
+
+// ==========================================
+// ✅ 10. REGISTRAR SERVICIOS NUTRITION DIARY
+// ==========================================
+
+builder.Services.AddNutritionalDiaryServices();
+
+// ==========================================
+// 11 REGISTRAR SERVICIOS ANALYTICS & REPORTING
+// ==========================================
+
+builder.Services.AddAnalyticsServices();
+
+
+// ==========================================
+//  CONFIGURAR CONTROLLERS
 // ==========================================
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -77,7 +205,7 @@ builder.Services.AddControllers()
     });
 
 // ==========================================
-// 5. CONFIGURAR SWAGGER
+//  CONFIGURAR SWAGGER
 // ==========================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -107,7 +235,7 @@ builder.Services.AddSwaggerGen(c =>
                     Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 }
-            },
+             },
             Array.Empty<string>()
         }
     });
@@ -122,7 +250,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ==========================================
-// 6. CONFIGURAR CORS
+//  CONFIGURAR CORS
 // ==========================================
 builder.Services.AddCors(options =>
 {
@@ -133,12 +261,12 @@ builder.Services.AddCors(options =>
 });
 
 // ==========================================
-// 7. CONSTRUIR APLICACIÓN
+//  CONSTRUIR APLICACIÓN
 // ==========================================
 var app = builder.Build();
 
 // ==========================================
-// 8. CONFIGURAR MIDDLEWARES - IMPORTANTE: ORDEN
+//  CONFIGURAR MIDDLEWARES - IMPORTANTE: ORDEN
 // ==========================================
 
 // ✅ Swagger - DEBE IR ANTES de UseRouting

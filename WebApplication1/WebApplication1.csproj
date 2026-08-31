@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+        <PackageReference Include="itext7" Version="8.0.3" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8"/>
         <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
@@ -19,6 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="patient_management\Domain\Model\" />
       <Folder Include="shared\catalogs\Enums\" />
     </ItemGroup>
 
