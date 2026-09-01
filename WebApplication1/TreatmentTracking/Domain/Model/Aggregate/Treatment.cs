@@ -174,7 +174,7 @@ public class Treatment
 
         var riskScore = new RiskScore(
             Guid.NewGuid().ToString(),
-            0,
+            10, // Cambiado de 0 a 10 para que tenga un score inicial
             RiskLevel.LOW,
             DateTime.UtcNow
         );
@@ -190,12 +190,12 @@ public class Treatment
             startDate,
             endDate,
             TreatmentStatus.ACTIVE,
-            100, // AdherenceScore inicial
-            0,   // CurrentStreak inicial
-            0,   // TotalConfirmed inicial
-            0,   // TotalOmitted inicial
-            null, // CompletionObservation
-            null, // AbandonmentObservation
+            100,
+            0,
+            0,
+            0,
+            null,
+            null,
             riskScore
         );
     }

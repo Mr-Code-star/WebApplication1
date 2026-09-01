@@ -142,24 +142,52 @@ public class PatientCommandServiceImpl : IPatientCommandService
         await _patientRepository.UpdateAsync(patient);
     }
 
+    // PatientCommandServiceImpl.cs - Método RegisterHemoglobinControlAsync
+
     public async Task RegisterHemoglobinControlAsync(RegisterHemoglobinControlCommand command)
     {
-        var medicalRecord = await _medicalRecordRepository.FindByPatientIdAsync(command.PatientId);
-
-        if (medicalRecord == null)
+        try
         {
-            throw new Exception("Medical record not found");
+            Console.WriteLine($"🔍 RegisterHemoglobinControlAsync - Iniciando...");
+            Console.WriteLine($"🔍 PatientId: {command?.PatientId}");
+            Console.WriteLine($"🔍 HemoglobinLevel: {command?.HemoglobinLevel}");
+
+            if (command == null)
+                throw new ArgumentNullException(nameof(command));
+
+            if (string.IsNullOrEmpty(command.PatientId))
+                throw new ArgumentException("PatientId es requerido");
+
+            var medicalRecord = await _medicalRecordRepository.FindByPatientIdAsync(command.PatientId);
+
+            if (medicalRecord == null)
+            {
+                Console.WriteLine($"❌ Medical record not found for patient {command.PatientId}");
+                throw new Exception("Medical record not found");
+            }
+
+            Console.WriteLine($"✅ Medical record encontrado: {medicalRecord.Id}");
+
+            var control = new Control(
+                Guid.NewGuid().ToString(),
+                DateTime.UtcNow,
+                new HemoglobinLevel(command.HemoglobinLevel)
+            );
+
+            Console.WriteLine($"✅ Control creado: {control.Id}");
+
+            medicalRecord.AddControl(control);
+            Console.WriteLine($"✅ Control agregado al medical record");
+
+            await _medicalRecordRepository.UpdateAsync(medicalRecord);
+            Console.WriteLine($"✅ Medical record actualizado");
         }
-
-        var control = new Control(
-            Guid.NewGuid().ToString(),
-            DateTime.UtcNow,
-            new HemoglobinLevel(command.HemoglobinLevel)
-        );
-
-        medicalRecord.AddControl(control);  // ✅ Esto actualiza HemoglobinLevel y agrega Control
-
-        await _medicalRecordRepository.UpdateAsync(medicalRecord);  // ✅ Esto debe guardar ambos
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error en RegisterHemoglobinControlAsync: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
+            throw;
+        }
     }
     
     public async Task RegisterPatientAsync(RegisterPatientCommand command)

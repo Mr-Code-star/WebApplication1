@@ -33,6 +33,19 @@ public class TreatmentController : ControllerBase
     {
         try
         {
+            // 🔍 LOG PARA DEPURAR
+            Console.WriteLine($"Request recibido: {System.Text.Json.JsonSerializer.Serialize(request)}");
+        
+            if (request == null)
+            {
+                return BadRequest(new { error = "El cuerpo de la petición es requerido" });
+            }
+
+            if (string.IsNullOrEmpty(request.PatientId))
+            {
+                return BadRequest(new { error = "PatientId es requerido" });
+            }
+
             var nurseId = User.FindFirst("nurseId")?.Value;
 
             if (string.IsNullOrEmpty(nurseId))
@@ -40,6 +53,7 @@ public class TreatmentController : ControllerBase
                 return BadRequest(new { error = "Nurse ID no encontrado en el token" });
             }
 
+            // Validar que la enfermera tiene este paciente
             await _facade.ValidateNurseHasPatientAsync(nurseId, request.PatientId);
 
             var resource = new StartTreatmentResource
@@ -59,10 +73,13 @@ public class TreatmentController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            // 🔍 LOG DEL ERROR COMPLETO
+            Console.WriteLine($"Error en StartTreatment: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            return BadRequest(new { error = ex.Message, detail = ex.ToString() });
         }
     }
-
+    
     // ==========================================
     // 2. CONFIRMAR DOSIS - SOLO MOTHER
     // ==========================================

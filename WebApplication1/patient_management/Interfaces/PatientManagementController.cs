@@ -187,39 +187,62 @@ public class PatientManagementController : ControllerBase
     // 4. REGISTRAR CONTROL DE HEMOGLOBINA
     // ==========================================
 
-    [HttpPost("hemoglobin-control")]
-    [Authorize]
-    [RequireRole("Nurse")] 
-    public async Task<IActionResult> RegisterHemoglobinControl([FromBody] RegisterHemoglobinRequest request)
+    // PatientManagementController.cs - Método RegisterHemoglobinControl
+
+[HttpPost("hemoglobin-control")]
+[Authorize]
+[RequireRole("Nurse")] 
+public async Task<IActionResult> RegisterHemoglobinControl([FromBody] RegisterHemoglobinRequest request)
+{
+    try
     {
-        try
+        Console.WriteLine($"🔍 RegisterHemoglobinControl - Iniciando...");
+        Console.WriteLine($"🔍 Request: {System.Text.Json.JsonSerializer.Serialize(request)}");
+
+        var nurseId = User.FindFirst("nurseId")?.Value;
+
+        if (string.IsNullOrEmpty(nurseId))
         {
-            var nurseId = User.FindFirst("nurseId")?.Value;
-
-            if (string.IsNullOrEmpty(nurseId))
-            {
-                return BadRequest(new { error = "Nurse ID no encontrado en el token" });
-            }
-
-            if (string.IsNullOrEmpty(request.PatientId) || request.HemoglobinLevel == null)
-            {
-                return BadRequest(new { error = "Faltan campos: patientId, hemoglobinLevel" });
-            }
-
-            await _patientFacade.ValidateNurseHasPatientAsync(nurseId, request.PatientId);
-
-            var command = new RegisterHemoglobinControlCommand(request.PatientId, request.HemoglobinLevel.Value);
-
-            await _patientFacade.RegisterHemoglobinControlAsync(command);
-
-            return StatusCode(201, new { message = "Hemoglobin control registered successfully" });
+            Console.WriteLine("❌ Nurse ID no encontrado");
+            return BadRequest(new { error = "Nurse ID no encontrado en el token" });
         }
-        catch (Exception ex)
+
+        if (request == null)
         {
-            return BadRequest(new { error = ex.Message });
+            Console.WriteLine("❌ Request es null");
+            return BadRequest(new { error = "Request body es requerido" });
         }
+
+        if (string.IsNullOrEmpty(request.PatientId))
+        {
+            Console.WriteLine("❌ PatientId es null o vacío");
+            return BadRequest(new { error = "PatientId es requerido" });
+        }
+
+        if (request.HemoglobinLevel == null)
+        {
+            Console.WriteLine("❌ HemoglobinLevel es null");
+            return BadRequest(new { error = "HemoglobinLevel es requerido" });
+        }
+
+        Console.WriteLine($"🔍 Validando que la enfermera {nurseId} tiene al paciente {request.PatientId}");
+        await _patientFacade.ValidateNurseHasPatientAsync(nurseId, request.PatientId);
+
+        var command = new RegisterHemoglobinControlCommand(request.PatientId, request.HemoglobinLevel.Value);
+        Console.WriteLine($"🔍 Comando creado: PatientId={command.PatientId}, HemoglobinLevel={command.HemoglobinLevel}");
+
+        await _patientFacade.RegisterHemoglobinControlAsync(command);
+        Console.WriteLine("✅ Hemoglobin control registrado exitosamente");
+
+        return StatusCode(201, new { message = "Hemoglobin control registered successfully" });
     }
-
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error en RegisterHemoglobinControl: {ex.Message}");
+        Console.WriteLine($"Stack: {ex.StackTrace}");
+        return BadRequest(new { error = ex.Message });
+    }
+}
     // ==========================================
     // 5. ACTUALIZAR HISTORIA CLÍNICA
     // ==========================================

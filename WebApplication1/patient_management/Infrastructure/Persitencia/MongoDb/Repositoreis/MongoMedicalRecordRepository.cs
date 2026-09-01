@@ -48,38 +48,65 @@ public class MongoMedicalRecordRepository : IMedicalRecordRepository
 
     // MongoMedicalRecordRepository.cs
 
-    public async Task UpdateAsync(MedicalRecord medicalRecord)
+    // MongoMedicalRecordRepository.cs - Método UpdateAsync
+
+public async Task UpdateAsync(MedicalRecord medicalRecord)
+{
+    try
     {
-        var data = MedicalRecordMapper.ToPersistence(medicalRecord);
-        var id = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!;
+        Console.WriteLine($"🔍 UpdateAsync - MedicalRecordId: {medicalRecord?.Id}");
+        
+        if (medicalRecord == null)
+            throw new ArgumentNullException(nameof(medicalRecord));
+
+        var data = medicalRecord.ToPrimitives();
+        var id = data.Id;
+
+        Console.WriteLine($"🔍 ID para actualizar: {id}");
 
         var filter = Builders<MedicalRecordDocument>.Filter.Eq(x => x.MedicalRecordId, id);
+        
+        // Buscar el documento existente
+        var existingDoc = await _collection.Find(filter).FirstOrDefaultAsync();
+        if (existingDoc == null)
+        {
+            Console.WriteLine($"❌ No se encontró medical record con ID: {id}");
+            throw new Exception($"Medical record with ID {id} not found");
+        }
 
-        // ✅ Obtener controls actualizados
-        var controls = ((IEnumerable<dynamic>)data.GetType().GetProperty("controls")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
-            .Select(c => new ControlDocument
-            {
-                Id = c.Id,
-                Date = c.Date,
-                HemoglobinLevel = c.HemoglobinLevel,
-                AnemiaStatus = c.AnemiaStatus
-            }).ToList();
+        // Convertir controles
+        var controls = data.Controls.Select(c => new ControlDocument
+        {
+            Id = c.Id,
+            Date = c.Date,
+            HemoglobinLevel = c.HemoglobinLevel,
+            AnemiaStatus = c.AnemiaStatus
+        }).ToList();
+
+        Console.WriteLine($"🔍 Controls a actualizar: {controls.Count}");
 
         var update = Builders<MedicalRecordDocument>.Update
             .Set(x => x.UpdatedAt, DateTime.UtcNow)
-            .Set(x => x.Weight, (double)data.GetType().GetProperty("weight")?.GetValue(data, null)!)
-            .Set(x => x.Height, (double)data.GetType().GetProperty("height")?.GetValue(data, null)!)
-            .Set(x => x.Gender, (string)data.GetType().GetProperty("gender")?.GetValue(data, null)!)
-            .Set(x => x.MotivoConsulta, (string)data.GetType().GetProperty("motivoConsulta")?.GetValue(data, null)!)
-            .Set(x => x.Observaciones, (string?)data.GetType().GetProperty("observaciones")?.GetValue(data, null))
-            // ✅ AGREGAR: Actualizar HemoglobinLevel
-            .Set(x => x.HemoglobinLevel, (double?)data.GetType().GetProperty("hemoglobinLevel")?.GetValue(data, null))
-            // ✅ AGREGAR: Actualizar Controls
+            .Set(x => x.Weight, data.Weight)
+            .Set(x => x.Height, data.Height)
+            .Set(x => x.Gender, data.Gender)
+            .Set(x => x.MotivoConsulta, data.MotivoConsulta)
+            .Set(x => x.Observaciones, data.Observaciones)
+            .Set(x => x.HemoglobinLevel, data.HemoglobinLevel)
             .Set(x => x.Controls, controls);
 
-        await _collection.UpdateOneAsync(filter, update);
+        Console.WriteLine($"🔍 Aplicando update...");
+        var result = await _collection.UpdateOneAsync(filter, update);
+        
+        Console.WriteLine($"✅ Update completado. MatchedCount: {result.MatchedCount}, ModifiedCount: {result.ModifiedCount}");
     }
-
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error en UpdateAsync: {ex.Message}");
+        Console.WriteLine($"Stack: {ex.StackTrace}");
+        throw;
+    }
+}
     public async Task DeleteAsync(string medicalRecordId)
     {
         var filter = Builders<MedicalRecordDocument>.Filter.Eq(x => x.MedicalRecordId, medicalRecordId);

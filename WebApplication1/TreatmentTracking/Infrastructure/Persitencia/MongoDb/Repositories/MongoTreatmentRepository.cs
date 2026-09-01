@@ -20,32 +20,32 @@ public class MongoTreatmentRepository : ITreatmentRepository
 
     public async Task SaveAsync(Treatment treatment)
     {
-        var data = TreatmentMapper.ToPersistence(treatment);
-
+        var treatmentData = treatment.ToPrimitives();
+    
         var document = new TreatmentDocument
         {
-            TreatmentId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-            PatientId = (string)data.GetType().GetProperty("patientId")?.GetValue(data, null)!,
-            NurseId = (string)data.GetType().GetProperty("nurseId")?.GetValue(data, null)!,
-            Supplement = (string)data.GetType().GetProperty("supplement")?.GetValue(data, null)!,
-            Quantity = (string)data.GetType().GetProperty("quantity")?.GetValue(data, null)!,
-            DosingHours = (string)data.GetType().GetProperty("dosingHours")?.GetValue(data, null)!,
-            DurationDays = (int)data.GetType().GetProperty("durationDays")?.GetValue(data, null)!,
-            StartDate = (DateTime)data.GetType().GetProperty("startDate")?.GetValue(data, null)!,
-            EndDate = (DateTime)data.GetType().GetProperty("endDate")?.GetValue(data, null)!,
-            Status = (string)data.GetType().GetProperty("status")?.GetValue(data, null)!,
-            AdherenceScore = (double)data.GetType().GetProperty("adherenceScore")?.GetValue(data, null)!,
-            CurrentStreak = (int)data.GetType().GetProperty("currentStreak")?.GetValue(data, null)!,
-            TotalConfirmed = (int)data.GetType().GetProperty("totalConfirmed")?.GetValue(data, null)!,
-            TotalOmitted = (int)data.GetType().GetProperty("totalOmitted")?.GetValue(data, null)!,
-            CompletionObservation = (string?)data.GetType().GetProperty("completionObservation")?.GetValue(data, null),
-            AbandonmentObservation = (string?)data.GetType().GetProperty("abandonmentObservation")?.GetValue(data, null),
+            TreatmentId = treatmentData.Id,
+            PatientId = treatmentData.PatientId,
+            NurseId = treatmentData.NurseId,
+            Supplement = treatmentData.Supplement,
+            Quantity = treatmentData.Quantity,
+            DosingHours = treatmentData.DosingHours,
+            DurationDays = treatmentData.DurationDays,
+            StartDate = treatmentData.StartDate,
+            EndDate = treatmentData.EndDate,
+            Status = treatmentData.Status,
+            AdherenceScore = treatmentData.AdherenceScore,
+            CurrentStreak = treatmentData.CurrentStreak,
+            TotalConfirmed = treatmentData.TotalConfirmed,
+            TotalOmitted = treatmentData.TotalOmitted,
+            CompletionObservation = treatmentData.CompletionObservation,
+            AbandonmentObservation = treatmentData.AbandonmentObservation,
             RiskScore = new RiskScoreDocument
             {
-                Id = (string)data.GetType().GetProperty("riskScore")?.GetType().GetProperty("id")?.GetValue(data.GetType().GetProperty("riskScore")?.GetValue(data, null), null)!,
-                Score = (int)data.GetType().GetProperty("riskScore")?.GetType().GetProperty("score")?.GetValue(data.GetType().GetProperty("riskScore")?.GetValue(data, null), null)!,
-                RiskLevel = (string)data.GetType().GetProperty("riskScore")?.GetType().GetProperty("riskLevel")?.GetValue(data.GetType().GetProperty("riskScore")?.GetValue(data, null), null)!,
-                CalculatedAt = (DateTime)data.GetType().GetProperty("riskScore")?.GetType().GetProperty("calculatedAt")?.GetValue(data.GetType().GetProperty("riskScore")?.GetValue(data, null), null)!
+                Id = treatmentData.RiskScore?.Id ?? Guid.NewGuid().ToString(),
+                Score = treatmentData.RiskScore?.Score ?? 0,
+                RiskLevel = treatmentData.RiskScore?.RiskLevel ?? "LOW",
+                CalculatedAt = treatmentData.RiskScore?.CalculatedAt ?? DateTime.UtcNow
             }
         };
 
@@ -128,25 +128,25 @@ public class MongoTreatmentRepository : ITreatmentRepository
 
     public async Task UpdateAsync(Treatment treatment)
     {
-        var data = TreatmentMapper.ToPersistence(treatment);
-        var treatmentId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!;
+        var treatmentData = treatment.ToPrimitives();
+        var treatmentId = treatmentData.Id;
 
         var filter = Builders<TreatmentDocument>.Filter.Eq(x => x.TreatmentId, treatmentId);
 
         var update = Builders<TreatmentDocument>.Update
-            .Set(x => x.Status, (string)data.GetType().GetProperty("status")?.GetValue(data, null)!)
-            .Set(x => x.AdherenceScore, (double)data.GetType().GetProperty("adherenceScore")?.GetValue(data, null)!)
-            .Set(x => x.CurrentStreak, (int)data.GetType().GetProperty("currentStreak")?.GetValue(data, null)!)
-            .Set(x => x.TotalConfirmed, (int)data.GetType().GetProperty("totalConfirmed")?.GetValue(data, null)!)
-            .Set(x => x.TotalOmitted, (int)data.GetType().GetProperty("totalOmitted")?.GetValue(data, null)!)
-            .Set(x => x.CompletionObservation, (string?)data.GetType().GetProperty("completionObservation")?.GetValue(data, null))
-            .Set(x => x.AbandonmentObservation, (string?)data.GetType().GetProperty("abandonmentObservation")?.GetValue(data, null))
+            .Set(x => x.Status, treatmentData.Status)
+            .Set(x => x.AdherenceScore, treatmentData.AdherenceScore)
+            .Set(x => x.CurrentStreak, treatmentData.CurrentStreak)
+            .Set(x => x.TotalConfirmed, treatmentData.TotalConfirmed)
+            .Set(x => x.TotalOmitted, treatmentData.TotalOmitted)
+            .Set(x => x.CompletionObservation, treatmentData.CompletionObservation)
+            .Set(x => x.AbandonmentObservation, treatmentData.AbandonmentObservation)
             .Set(x => x.RiskScore, new RiskScoreDocument
             {
-                Id = (string)data.GetType().GetProperty("riskScore")?.GetType().GetProperty("id")?.GetValue(data.GetType().GetProperty("riskScore")?.GetValue(data, null), null)!,
-                Score = (int)data.GetType().GetProperty("riskScore")?.GetType().GetProperty("score")?.GetValue(data.GetType().GetProperty("riskScore")?.GetValue(data, null), null)!,
-                RiskLevel = (string)data.GetType().GetProperty("riskScore")?.GetType().GetProperty("riskLevel")?.GetValue(data.GetType().GetProperty("riskScore")?.GetValue(data, null), null)!,
-                CalculatedAt = (DateTime)data.GetType().GetProperty("riskScore")?.GetType().GetProperty("calculatedAt")?.GetValue(data.GetType().GetProperty("riskScore")?.GetValue(data, null), null)!
+                Id = treatmentData.RiskScore?.Id ?? Guid.NewGuid().ToString(),
+                Score = treatmentData.RiskScore?.Score ?? 0,
+                RiskLevel = treatmentData.RiskScore?.RiskLevel ?? "LOW",
+                CalculatedAt = treatmentData.RiskScore?.CalculatedAt ?? DateTime.UtcNow
             });
 
         await _collection.UpdateOneAsync(filter, update);
