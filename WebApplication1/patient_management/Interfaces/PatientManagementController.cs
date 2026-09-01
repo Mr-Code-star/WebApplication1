@@ -368,7 +368,7 @@ public class PatientManagementController : ControllerBase
     // ==========================================
     // 9. OBTENER HISTORIAL DE HEMOGLOBINA
     // ==========================================
-
+// PatientManagementController.cs
     [HttpGet("medical-record/{medicalRecordId}/controls")]
     [Authorize]
     [RequireRole("Nurse")] 
@@ -393,9 +393,8 @@ public class PatientManagementController : ControllerBase
             var query = new GetHemoglobinControlsHistoryQuery(medicalRecordId);
             var history = await _patientFacade.GetHemoglobinControlsHistoryAsync(query);
 
-            var resource = HemoglobinHistoryResourceAssembler.ToResource(history);
-
-            return Ok(resource);
+            // ✅ Retornar el DTO directamente
+            return Ok(history);
         }
         catch (Exception ex)
         {

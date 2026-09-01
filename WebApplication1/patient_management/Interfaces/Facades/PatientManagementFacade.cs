@@ -76,7 +76,7 @@ public class PatientManagementFacade
         return await _queryService.GetMedicalRecordAsync(query);
     }
 
-    public async Task<IReadOnlyList<Control>> GetHemoglobinControlsHistoryAsync(GetHemoglobinControlsHistoryQuery query)
+    public async Task<object> GetHemoglobinControlsHistoryAsync(GetHemoglobinControlsHistoryQuery query)
     {
         return await _queryService.GetHemoglobinControlsHistoryAsync(query);
     }

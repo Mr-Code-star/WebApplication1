@@ -69,7 +69,11 @@ public class MedicalRecord
 
     public void AddControl(Control control)
     {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+
         Controls.Add(control);
+        // ✅ Actualizar el nivel de hemoglobina con el último control
         HemoglobinLevel = control.HemoglobinLevel;
         UpdatedAt = DateTime.UtcNow;
     }

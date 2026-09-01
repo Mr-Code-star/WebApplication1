@@ -74,6 +74,8 @@ public class MongoMedicalRecordRepository : IMedicalRecordRepository
         return MedicalRecordMapper.ToDomain(document); // ✅ Usa el mapper actualizado
     }
 
+    // MongoMedicalRecordRepository.cs
+
     public async Task UpdateAsync(MedicalRecord medicalRecord)
     {
         var data = MedicalRecordMapper.ToPersistence(medicalRecord);
@@ -81,13 +83,27 @@ public class MongoMedicalRecordRepository : IMedicalRecordRepository
 
         var filter = Builders<MedicalRecordDocument>.Filter.Eq(x => x.MedicalRecordId, id);
 
+        // ✅ Obtener controls actualizados
+        var controls = ((IEnumerable<dynamic>)data.GetType().GetProperty("controls")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
+            .Select(c => new ControlDocument
+            {
+                Id = c.Id,
+                Date = c.Date,
+                HemoglobinLevel = c.HemoglobinLevel,
+                AnemiaStatus = c.AnemiaStatus
+            }).ToList();
+
         var update = Builders<MedicalRecordDocument>.Update
             .Set(x => x.UpdatedAt, DateTime.UtcNow)
             .Set(x => x.Weight, (double)data.GetType().GetProperty("weight")?.GetValue(data, null)!)
             .Set(x => x.Height, (double)data.GetType().GetProperty("height")?.GetValue(data, null)!)
             .Set(x => x.Gender, (string)data.GetType().GetProperty("gender")?.GetValue(data, null)!)
             .Set(x => x.MotivoConsulta, (string)data.GetType().GetProperty("motivoConsulta")?.GetValue(data, null)!)
-            .Set(x => x.Observaciones, (string?)data.GetType().GetProperty("observaciones")?.GetValue(data, null));
+            .Set(x => x.Observaciones, (string?)data.GetType().GetProperty("observaciones")?.GetValue(data, null))
+            // ✅ AGREGAR: Actualizar HemoglobinLevel
+            .Set(x => x.HemoglobinLevel, (double?)data.GetType().GetProperty("hemoglobinLevel")?.GetValue(data, null))
+            // ✅ AGREGAR: Actualizar Controls
+            .Set(x => x.Controls, controls);
 
         await _collection.UpdateOneAsync(filter, update);
     }

@@ -157,11 +157,11 @@ public class PatientCommandServiceImpl : IPatientCommandService
             new HemoglobinLevel(command.HemoglobinLevel)
         );
 
-        medicalRecord.AddControl(control);
+        medicalRecord.AddControl(control);  // ✅ Esto actualiza HemoglobinLevel y agrega Control
 
-        await _medicalRecordRepository.UpdateAsync(medicalRecord);
+        await _medicalRecordRepository.UpdateAsync(medicalRecord);  // ✅ Esto debe guardar ambos
     }
-
+    
     public async Task RegisterPatientAsync(RegisterPatientCommand command)
     {
         var patient = new Patient(

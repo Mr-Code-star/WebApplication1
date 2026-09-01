@@ -1,6 +1,7 @@
 ﻿using WebApplication1.Contexts.IAM.Domain.Repositories;
 using WebApplication1.patient_management.Domain.Aggregate;
 using WebApplication1.patient_management.Domain.Entities;
+using WebApplication1.patient_management.Domain.Enums;
 using WebApplication1.patient_management.Domain.Queries;
 using WebApplication1.patient_management.Domain.Repositories;
 using WebApplication1.patient_management.Domain.Services;
@@ -117,17 +118,66 @@ public class PatientQueryServiceImpl : IPatientQueryService
         return await PdfService.GenerateMedicalRecordPdfAsync(patient.ToPrimitives(), medicalData);
     }
 
-    public async Task<IReadOnlyList<Control>> GetHemoglobinControlsHistoryAsync(GetHemoglobinControlsHistoryQuery query)
+    // PatientQueryServiceImpl.cs
+
+    // PatientQueryServiceImpl.cs
+
+public async Task<object> GetHemoglobinControlsHistoryAsync(GetHemoglobinControlsHistoryQuery query)
+{
+    var medicalRecord = await _medicalRecordRepository.FindByIdAsync(query.MedicalRecordId);
+
+    if (medicalRecord == null)
     {
-        var medicalRecord = await _medicalRecordRepository.FindByIdAsync(query.MedicalRecordId);
-
-        if (medicalRecord == null)
-        {
-            throw new Exception("Medical record not found");
-        }
-
-        return medicalRecord.Controls.AsReadOnly();
+        throw new Exception("Medical record not found");
     }
+
+    // ✅ Obtener el paciente para el nombre
+    var patient = await _patientRepository.FindByIdAsync(medicalRecord.PatientId);
+    var patientName = patient != null ? $"{patient.Name} {patient.LastName}" : "Paciente";
+
+    var controls = medicalRecord.Controls.OrderBy(c => c.Date).ToList();
+    
+    // ✅ Calcular promedio
+    double? averageHemoglobin = controls.Count > 0 
+        ? Math.Round(controls.Average(c => c.HemoglobinLevel.Value ?? 0), 2) 
+        : (double?)null;
+    
+    // ✅ Calcular evolución (último - primero)
+    double? evolution = null;
+    if (controls.Count >= 2)
+    {
+        var first = controls.First().HemoglobinLevel.Value ?? 0;
+        var last = controls.Last().HemoglobinLevel.Value ?? 0;
+        evolution = Math.Round(last - first, 2);
+    }
+
+    // ✅ Calcular tendencia
+    string? trend = null;
+    if (controls.Count >= 3)
+    {
+        var values = controls.Select(c => c.HemoglobinLevel.Value ?? 0).ToList();
+        var firstHalf = values.Take(values.Count / 2).Average();
+        var secondHalf = values.Skip(values.Count / 2).Average();
+        trend = secondHalf > firstHalf ? "UP" : secondHalf < firstHalf ? "DOWN" : "STABLE";
+    }
+
+    return new
+    {
+        patientId = medicalRecord.PatientId,
+        patientName = patientName,
+        controls = controls.Select(c => new
+        {
+            id = c.Id,
+            date = c.Date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            hemoglobinLevel = c.HemoglobinLevel.Value,
+            anemiaStatus = c.AnemiaStatus.ToStringValue()
+        }).ToList(),
+        averageHemoglobin = averageHemoglobin,
+        totalControls = controls.Count,
+        evolution = evolution,
+        trend = trend
+    };
+}
 
     public async Task<MedicalRecord?> GetMedicalRecordAsync(GetMedicalRecordQuery query)
     {

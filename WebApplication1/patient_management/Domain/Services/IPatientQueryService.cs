@@ -1,5 +1,6 @@
 ﻿using WebApplication1.patient_management.Domain.Aggregate;
 using WebApplication1.patient_management.Domain.Entities;
+using WebApplication1.patient_management.Domain.Model.DTos;
 using WebApplication1.patient_management.Domain.Queries;
 
 namespace WebApplication1.patient_management.Domain.Services;
@@ -43,6 +44,7 @@ public interface IPatientQueryService
 
     Task<MedicalRecord?> GetMedicalRecordByIdAsync(string medicalRecordId);
 
-    Task<IReadOnlyList<Control>> GetHemoglobinControlsHistoryAsync(GetHemoglobinControlsHistoryQuery query);
+    Task<object> GetHemoglobinControlsHistoryAsync(GetHemoglobinControlsHistoryQuery query);
     Task<object> GetHemoglobinEvolutionChartAsync(GetHemoglobinEvolutionChartQuery query);
+        
 }
