@@ -1,9 +1,7 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-
 namespace WebApplication1.HealthyFacility.Infrastructure.Persitence.MongoDb.Models;
-
 
 public class CoordinatesDocument
 {
@@ -34,6 +32,10 @@ public class HealthFacilityDocument
     public OperatingScheduleDocument OperatingSchedule { get; set; } = new();
     public string ScheduleOfOperation { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    
+    // ✅ AGREGAR ESTO
+    public List<NurseAssignmentDocument> NurseAssignments { get; set; } = new();
+    
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

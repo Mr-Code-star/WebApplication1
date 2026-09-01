@@ -24,25 +24,21 @@ public class MongoHealthFacilityRepository : IHealthFacilityRepository
         {
             _logger.LogInformation("📝 Guardando posta: {FacilityName}", facility.Name);
 
-            // ✅ Usar el DTO de persistencia
             var data = HealthFacilityMapper.ToPersistence(facility);
 
-            _logger.LogInformation("📄 Datos mapeados: {@Data}", new
-            {
-                data.Id,
-                data.Name,
-                data.Address,
-                data.DistrictId,
-                data.DistrictName,
-                data.Latitude,
-                data.Longitude,
-                data.PhoneNumber,
-                ServicesCount = data.Services.Count,
-                AvailableDaysCount = data.AvailableDays.Count,
-                AvailableSlotsCount = data.AvailableSlots.Count,
-                data.ScheduleOfOperation,
-                data.Status
-            });
+            // ✅ Crear documentos de NurseAssignment
+            var nurseAssignments = data.NurseAssignments?
+                .Select(na => new NurseAssignmentDocument
+                {
+                    NurseAssignmentId = na.Id,      // ✅ Usar NurseAssignmentId
+                    FacilityId = na.FacilityId,
+                    NurseId = na.NurseId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                })
+                .ToList() ?? new List<NurseAssignmentDocument>();
+
+            _logger.LogInformation("📋 NurseAssignments a guardar: {Count}", nurseAssignments.Count);
 
             var document = new HealthFacilityDocument
             {
@@ -65,6 +61,7 @@ public class MongoHealthFacilityRepository : IHealthFacilityRepository
                 },
                 ScheduleOfOperation = data.ScheduleOfOperation,
                 Status = data.Status,
+                NurseAssignments = nurseAssignments,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -80,7 +77,8 @@ public class MongoHealthFacilityRepository : IHealthFacilityRepository
             throw;
         }
     }
-
+    
+    // ✅ CORREGIDO: Pasar HealthFacilityDocument directamente
     public async Task<HealthFacility?> FindByIdAsync(string id)
     {
         var filter = Builders<HealthFacilityDocument>.Filter.Eq(x => x.HealthFacilityId, id);
@@ -88,96 +86,22 @@ public class MongoHealthFacilityRepository : IHealthFacilityRepository
 
         if (document == null) return null;
 
-        // ✅ Convertir documento a objeto dinámico para el mapper
-        var dynamicDoc = new
-        {
-            id = document.HealthFacilityId,
-            name = document.Name,
-            address = document.Address,
-            districtId = document.DistrictId,
-            districtName = document.DistrictName,
-            coordinates = new { lat = document.Coordinates.Lat, lng = document.Coordinates.Lng },
-            phoneNumber = document.PhoneNumber,
-            services = document.Services,
-            operatingSchedule = new
-            {
-                availableDays = document.OperatingSchedule.AvailableDays,
-                availableSlots = document.OperatingSchedule.AvailableSlots
-            },
-            scheduleOfOperation = document.ScheduleOfOperation,
-            status = document.Status,
-            nurseAssignments = new List<object>() // Asignaciones vacías por ahora
-        };
-
-        return HealthFacilityMapper.ToDomain(dynamicDoc);
+        return HealthFacilityMapper.ToDomain(document);
     }
 
+    // ✅ CORREGIDO: Pasar HealthFacilityDocument directamente
     public async Task<List<HealthFacility>> FindAllAsync()
     {
         var documents = await _collection.Find(_ => true).ToListAsync();
-        var result = new List<HealthFacility>();
-
-        foreach (var doc in documents)
-        {
-            var dynamicDoc = new
-            {
-                id = doc.HealthFacilityId,
-                name = doc.Name,
-                address = doc.Address,
-                districtId = doc.DistrictId,
-                districtName = doc.DistrictName,
-                coordinates = new { lat = doc.Coordinates.Lat, lng = doc.Coordinates.Lng },
-                phoneNumber = doc.PhoneNumber,
-                services = doc.Services,
-                operatingSchedule = new
-                {
-                    availableDays = doc.OperatingSchedule.AvailableDays,
-                    availableSlots = doc.OperatingSchedule.AvailableSlots
-                },
-                scheduleOfOperation = doc.ScheduleOfOperation,
-                status = doc.Status,
-                nurseAssignments = new List<object>()
-            };
-
-            result.Add(HealthFacilityMapper.ToDomain(dynamicDoc));
-        }
-
-        return result;
+        return documents.Select(HealthFacilityMapper.ToDomain).ToList();
     }
 
+    // ✅ CORREGIDO: Pasar HealthFacilityDocument directamente
     public async Task<List<HealthFacility>> FindActiveFacilitiesAsync()
     {
         var filter = Builders<HealthFacilityDocument>.Filter.Eq(x => x.Status, FacilityStatus.ACTIVE.ToStringValue());
         var documents = await _collection.Find(filter).ToListAsync();
-
-        var result = new List<HealthFacility>();
-
-        foreach (var doc in documents)
-        {
-            var dynamicDoc = new
-            {
-                id = doc.HealthFacilityId,
-                name = doc.Name,
-                address = doc.Address,
-                districtId = doc.DistrictId,
-                districtName = doc.DistrictName,
-                coordinates = new { lat = doc.Coordinates.Lat, lng = doc.Coordinates.Lng },
-                phoneNumber = doc.PhoneNumber,
-                services = doc.Services,
-                operatingSchedule = new
-                {
-                    availableDays = doc.OperatingSchedule.AvailableDays,
-                    availableSlots = doc.OperatingSchedule.AvailableSlots
-                },
-                scheduleOfOperation = doc.ScheduleOfOperation,
-                status = doc.Status,
-                nurseAssignments = new List<object>()
-            };
-
-            result.Add(HealthFacilityMapper.ToDomain(dynamicDoc));
-        }
-
-        return result;
+        return documents.Select(HealthFacilityMapper.ToDomain).ToList();
     }
 
     public async Task UpdateAsync(HealthFacility facility)
@@ -206,4 +130,3 @@ public class MongoHealthFacilityRepository : IHealthFacilityRepository
         _logger.LogInformation("Posta de salud actualizada: {HealthFacilityId}", data.Id);
     }
 }
-

@@ -1,40 +1,43 @@
 ﻿using WebApplication1.HealthyFacility.Domain.Models.Aggregate;
 using WebApplication1.HealthyFacility.Domain.Models.Entities;
 using WebApplication1.HealthyFacility.Domain.Models.ValueObjects;
+using WebApplication1.HealthyFacility.Infrastructure.Persitence.MongoDb.Models;
 
 namespace WebApplication1.HealthyFacility.Infrastructure.Mappers;
 
 public static class HealthFacilityMapper
 {
-    public static HealthFacility ToDomain(dynamic document)
+    public static HealthFacility ToDomain(HealthFacilityDocument document)
     {
-        var nurseAssignments = ((IEnumerable<dynamic>)document.nurseAssignments ?? Enumerable.Empty<dynamic>())
-            .Select((dynamic assignment) =>
-                new NurseAssignment(
-                    assignment.id,
-                    assignment.facilityId,
-                    assignment.nurseId
-                )
-            ).ToList();
+        if (document == null)
+            throw new ArgumentNullException(nameof(document));
+
+        var nurseAssignments = document.NurseAssignments?
+            .Select(na => new NurseAssignment(
+                na.NurseAssignmentId,
+                na.FacilityId,
+                na.NurseId
+            ))
+            .ToList() ?? new List<NurseAssignment>();
 
         return new HealthFacility(
-            document.id,
-            document.name,
-            document.address,
-            document.districtId,
-            document.districtName,
+            document.HealthFacilityId,
+            document.Name,
+            document.Address,
+            document.DistrictId,
+            document.DistrictName,
             new Coordinates(
-                document.coordinates.lat,
-                document.coordinates.lng
+                document.Coordinates.Lat,
+                document.Coordinates.Lng
             ),
-            document.phoneNumber,
-            ((IEnumerable<dynamic>)document.services ?? Enumerable.Empty<dynamic>()).Select(s => (string)s).ToList(),
+            document.PhoneNumber,
+            document.Services ?? new List<string>(),
             new OperatingSchedule(
-                ((IEnumerable<dynamic>)document.operatingSchedule.availableDays ?? Enumerable.Empty<dynamic>()).Select(d => (string)d).ToList(),
-                ((IEnumerable<dynamic>)document.operatingSchedule.availableSlots ?? Enumerable.Empty<dynamic>()).Select(s => (string)s).ToList()
+                document.OperatingSchedule?.AvailableDays ?? new List<string>(),
+                document.OperatingSchedule?.AvailableSlots ?? new List<string>()
             ),
-            document.scheduleOfOperation,
-            FacilityStatusExtensions.FromString(document.status),
+            document.ScheduleOfOperation,
+            FacilityStatusExtensions.FromString(document.Status),
             nurseAssignments
         );
     }
@@ -46,7 +49,6 @@ public static class HealthFacilityMapper
 
         var data = facility.ToPrimitives();
 
-        // ✅ Crear un DTO con valores por defecto para evitar null
         return new HealthFacilityPersistenceDto
         {
             Id = data.Id ?? string.Empty,

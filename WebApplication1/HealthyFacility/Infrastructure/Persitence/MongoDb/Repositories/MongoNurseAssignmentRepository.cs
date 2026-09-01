@@ -19,21 +19,24 @@ public class MongoNurseAssignmentRepository : INurseAssignmentRepository
 
     public async Task<NurseAssignment> SaveAsync(NurseAssignment assignment)
     {
-        var data = NurseAssignmentMapper.ToPersistence(assignment);
-
-        var document = new NurseAssignmentDocument
+        try
         {
-            NurseAssignmentId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-            FacilityId = (string)data.GetType().GetProperty("facilityId")?.GetValue(data, null)!,
-            NurseId = (string)data.GetType().GetProperty("nurseId")?.GetValue(data, null)!,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+            // ✅ Usar el mapper correctamente
+            var document = NurseAssignmentMapper.ToPersistence(assignment);
+            
+            _logger.LogInformation("📝 Guardando asignación: NurseId={NurseId}, FacilityId={FacilityId}", 
+                document.NurseId, document.FacilityId);
 
-        await _collection.InsertOneAsync(document);
-        _logger.LogInformation("Asignación de enfermero creada: {NurseAssignmentId}", document.NurseAssignmentId);
+            await _collection.InsertOneAsync(document);
+            _logger.LogInformation("✅ Asignación de enfermero creada: {NurseAssignmentId}", document.NurseAssignmentId);
 
-        return assignment;
+            return assignment;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al guardar asignación de enfermero");
+            throw;
+        }
     }
 
     public async Task<List<NurseAssignment>> FindByFacilityIdAsync(string facilityId)
