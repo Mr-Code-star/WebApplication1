@@ -355,40 +355,56 @@ public class TreatmentQueryServiceImpl : ITreatmentQueryService
 
     public async Task<object> GetTreatmentsByNurseAsync(GetTreatmentsByNurseQuery query)
     {
-        var treatments = await _treatmentRepository.FindByNurseIdAsync(query.NurseId, query.Status);
-
-        if (treatments.Count == 0)
+        try
         {
+            var treatments = await _treatmentRepository.FindByNurseIdAsync(query.NurseId, query.Status);
+
+            if (treatments.Count == 0)
+            {
+                return new
+                {
+                    nurseId = query.NurseId,
+                    treatments = new List<object>(),
+                    message = "No treatments found"
+                };
+            }
+
+            var mappedTreatments = new List<object>();
+
+            foreach (var treatment in treatments)
+            {
+                try
+                {
+                    var treatmentData = treatment.ToPrimitives();
+                    var patient = await _patientRepository.FindByIdAsync(treatmentData.PatientId);
+                    var patientData = patient?.ToPrimitives();
+
+                    mappedTreatments.Add(new
+                    {
+                        treatmentId = treatmentData.Id,
+                        patientId = treatmentData.PatientId,
+                        patientName = patientData != null ? $"{patientData.Name} {patientData.LastName}" : "Unknown patient",
+                        status = treatmentData.Status,
+                        supplementName = treatmentData.Supplement
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al mapear tratamiento {TreatmentId}", treatment.Id);
+                    // Continuar con el siguiente
+                }
+            }
+
             return new
             {
                 nurseId = query.NurseId,
-                treatments = new List<object>(),
-                message = "No treatments found"
+                treatments = mappedTreatments
             };
         }
-
-        var mappedTreatments = new List<object>();
-
-        foreach (var treatment in treatments)
+        catch (Exception ex)
         {
-            var treatmentData = treatment.ToPrimitives();
-            var patient = await _patientRepository.FindByIdAsync(treatmentData.PatientId);
-            var patientData = patient?.ToPrimitives();
-
-            mappedTreatments.Add(new
-            {
-                treatmentId = treatmentData.Id,
-                patientId = treatmentData.PatientId,
-                patientName = patientData != null ? $"{patientData.Name} {patientData.LastName}" : "Unknown patient",
-                status = treatmentData.Status,
-                supplementName = treatmentData.Supplement
-            });
+            _logger.LogError(ex, "Error en GetTreatmentsByNurseAsync");
+            throw;
         }
-
-        return new
-        {
-            nurseId = query.NurseId,
-            treatments = mappedTreatments
-        };
     }
 }

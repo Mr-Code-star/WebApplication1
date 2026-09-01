@@ -1,69 +1,77 @@
 ﻿using WebApplication1.TreatmentTracking.Domain.Model.Aggregate;
 using WebApplication1.TreatmentTracking.Domain.Model.Entities;
 using WebApplication1.TreatmentTracking.Domain.Model.ValueObjects;
+using WebApplication1.TreatmentTracking.Infrastructure.Persitencia.MongoDb.Models;
 
 namespace WebApplication1.TreatmentTracking.Infrastructure.Mappers;
 
 public static class TreatmentMapper
 {
-    public static Treatment ToDomain(dynamic document)
+    public static Treatment ToDomain(TreatmentDocument document)
     {
+        if (document == null)
+            throw new ArgumentNullException(nameof(document));
+
+        // Crear RiskScore desde el documento
         var riskScore = new RiskScore(
-            document.riskScore.id,
-            document.riskScore.score,
-            RiskLevelExtensions.FromString(document.riskScore.riskLevel ?? "LOW"),
-            document.riskScore.calculatedAt ?? DateTime.UtcNow
+            document.RiskScore?.Id ?? Guid.NewGuid().ToString(),
+            document.RiskScore?.Score ?? 10,
+            RiskLevelExtensions.FromString(document.RiskScore?.RiskLevel ?? "LOW"),
+            document.RiskScore?.CalculatedAt ?? DateTime.UtcNow
         );
 
         return new Treatment(
-            document.id,
-            document.patientId,
-            document.nurseId,
-            document.supplement,
-            document.quantity,
-            document.dosingHours,
-            document.durationDays,
-            document.startDate,
-            document.endDate,
-            TreatmentStatusExtensions.FromString(document.status),
-            document.adherenceScore,
-            document.currentStreak,
-            document.totalConfirmed,
-            document.totalOmitted,
-            document.completionObservation,
-            document.abandonmentObservation,
+            document.TreatmentId,
+            document.PatientId,
+            document.NurseId,
+            document.Supplement,
+            document.Quantity,
+            document.DosingHours,
+            document.DurationDays,
+            document.StartDate,
+            document.EndDate,
+            TreatmentStatusExtensions.FromString(document.Status),
+            document.AdherenceScore,
+            document.CurrentStreak,
+            document.TotalConfirmed,
+            document.TotalOmitted,
+            document.CompletionObservation,
+            document.AbandonmentObservation,
             riskScore
         );
     }
 
-    public static object ToPersistence(Treatment treatment)
+    public static TreatmentDocument ToPersistence(Treatment treatment)
     {
+        if (treatment == null)
+            throw new ArgumentNullException(nameof(treatment));
+
         var data = treatment.ToPrimitives();
 
-        return new
+        return new TreatmentDocument
         {
-            id = data.Id,
-            patientId = data.PatientId,
-            nurseId = data.NurseId,
-            supplement = data.Supplement,
-            quantity = data.Quantity,
-            dosingHours = data.DosingHours,
-            durationDays = data.DurationDays,
-            startDate = data.StartDate,
-            endDate = data.EndDate,
-            status = data.Status,
-            adherenceScore = data.AdherenceScore,
-            currentStreak = data.CurrentStreak,
-            totalConfirmed = data.TotalConfirmed,
-            totalOmitted = data.TotalOmitted,
-            completionObservation = data.CompletionObservation,
-            abandonmentObservation = data.AbandonmentObservation,
-            riskScore = new
+            TreatmentId = data.Id,
+            PatientId = data.PatientId,
+            NurseId = data.NurseId,
+            Supplement = data.Supplement,
+            Quantity = data.Quantity,
+            DosingHours = data.DosingHours,
+            DurationDays = data.DurationDays,
+            StartDate = data.StartDate,
+            EndDate = data.EndDate,
+            Status = data.Status,
+            AdherenceScore = data.AdherenceScore,
+            CurrentStreak = data.CurrentStreak,
+            TotalConfirmed = data.TotalConfirmed,
+            TotalOmitted = data.TotalOmitted,
+            CompletionObservation = data.CompletionObservation,
+            AbandonmentObservation = data.AbandonmentObservation,
+            RiskScore = new RiskScoreDocument
             {
-                id = data.RiskScore.Id,
-                score = data.RiskScore.Score,
-                riskLevel = data.RiskScore.RiskLevel,
-                calculatedAt = data.RiskScore.CalculatedAt
+                Id = data.RiskScore?.Id ?? Guid.NewGuid().ToString(),
+                Score = data.RiskScore?.Score ?? 10,
+                RiskLevel = data.RiskScore?.RiskLevel ?? "LOW",
+                CalculatedAt = data.RiskScore?.CalculatedAt ?? DateTime.UtcNow
             }
         };
     }

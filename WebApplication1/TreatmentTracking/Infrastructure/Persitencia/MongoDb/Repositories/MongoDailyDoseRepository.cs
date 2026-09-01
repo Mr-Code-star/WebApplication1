@@ -22,17 +22,13 @@ public class MongoDailyDoseRepository : IDailyDoseRepository
     {
         var filter = Builders<DailyDoseDocument>.Filter.Eq(x => x.DailyDoseId, dailyDoseId);
         var document = await _collection.Find(filter).FirstOrDefaultAsync();
-
-        if (document == null) return null;
-
-        return DailyDoseMapper.ToDomain(document);
+        return document == null ? null : DailyDoseMapper.ToDomain(document);
     }
 
     public async Task<List<DailyDose>> FindByTreatmentIdAsync(string treatmentId)
     {
         var filter = Builders<DailyDoseDocument>.Filter.Eq(x => x.TreatmentId, treatmentId);
         var documents = await _collection.Find(filter).ToListAsync();
-
         return documents.Select(DailyDoseMapper.ToDomain).ToList();
     }
 
@@ -46,7 +42,6 @@ public class MongoDailyDoseRepository : IDailyDoseRepository
         );
 
         var documents = await _collection.Find(filter).ToListAsync();
-
         return documents.Select(DailyDoseMapper.ToDomain).ToList();
     }
 
@@ -63,61 +58,34 @@ public class MongoDailyDoseRepository : IDailyDoseRepository
         );
 
         var document = await _collection.Find(filter).FirstOrDefaultAsync();
-
-        if (document == null) return null;
-
-        return DailyDoseMapper.ToDomain(document);
+        return document == null ? null : DailyDoseMapper.ToDomain(document);
     }
 
     public async Task SaveAsync(DailyDose dose)
     {
-        var data = DailyDoseMapper.ToPersistence(dose);
-
-        var document = new DailyDoseDocument
-        {
-            DailyDoseId = (string)data.GetType().GetProperty("Id")?.GetValue(data, null)!,
-            TreatmentId = (string)data.GetType().GetProperty("TreatmentId")?.GetValue(data, null)!,
-            ScheduledDate = (DateTime)data.GetType().GetProperty("ScheduledDate")?.GetValue(data, null)!,
-            ConfirmedAt = (DateTime?)data.GetType().GetProperty("ConfirmedAt")?.GetValue(data, null),
-            Status = (string)data.GetType().GetProperty("Status")?.GetValue(data, null)!
-        };
-
+        var document = DailyDoseMapper.ToPersistence(dose);
         await _collection.InsertOneAsync(document);
         _logger.LogInformation("Dosis diaria guardada: {DailyDoseId}", document.DailyDoseId);
     }
 
     public async Task SaveManyAsync(List<DailyDose> doses)
     {
-        var documents = doses.Select(d =>
-        {
-            var data = DailyDoseMapper.ToPersistence(d);
-            return new DailyDoseDocument
-            {
-                DailyDoseId = (string)data.GetType().GetProperty("Id")?.GetValue(data, null)!,
-                TreatmentId = (string)data.GetType().GetProperty("TreatmentId")?.GetValue(data, null)!,
-                ScheduledDate = (DateTime)data.GetType().GetProperty("ScheduledDate")?.GetValue(data, null)!,
-                ConfirmedAt = (DateTime?)data.GetType().GetProperty("ConfirmedAt")?.GetValue(data, null),
-                Status = (string)data.GetType().GetProperty("Status")?.GetValue(data, null)!
-            };
-        }).ToList();
-
+        var documents = doses.Select(DailyDoseMapper.ToPersistence).ToList();
         await _collection.InsertManyAsync(documents);
         _logger.LogInformation("{Count} dosis diarias guardadas", documents.Count);
     }
 
     public async Task UpdateAsync(DailyDose dose)
     {
-        var data = DailyDoseMapper.ToPersistence(dose);
-        var dailyDoseId = (string)data.GetType().GetProperty("Id")?.GetValue(data, null)!;
-
-        var filter = Builders<DailyDoseDocument>.Filter.Eq(x => x.DailyDoseId, dailyDoseId);
+        var document = DailyDoseMapper.ToPersistence(dose);
+        var filter = Builders<DailyDoseDocument>.Filter.Eq(x => x.DailyDoseId, document.DailyDoseId);
 
         var update = Builders<DailyDoseDocument>.Update
-            .Set(x => x.Status, (string)data.GetType().GetProperty("Status")?.GetValue(data, null)!)
-            .Set(x => x.ConfirmedAt, (DateTime?)data.GetType().GetProperty("ConfirmedAt")?.GetValue(data, null));
+            .Set(x => x.Status, document.Status)
+            .Set(x => x.ConfirmedAt, document.ConfirmedAt);
 
         await _collection.UpdateOneAsync(filter, update);
-        _logger.LogInformation("Dosis diaria actualizada: {DailyDoseId}", dailyDoseId);
+        _logger.LogInformation("Dosis diaria actualizada: {DailyDoseId}", document.DailyDoseId);
     }
 
     public async Task DeleteAsync(string dailyDoseId)

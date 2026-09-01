@@ -40,6 +40,7 @@ public class MongoTreatmentRepository : ITreatmentRepository
             TotalOmitted = treatmentData.TotalOmitted,
             CompletionObservation = treatmentData.CompletionObservation,
             AbandonmentObservation = treatmentData.AbandonmentObservation,
+            // ✅ CORREGIDO: Usar "RiskScore" (mayúscula) para la clase C#
             RiskScore = new RiskScoreDocument
             {
                 Id = treatmentData.RiskScore?.Id ?? Guid.NewGuid().ToString(),
