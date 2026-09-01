@@ -12,7 +12,6 @@ public static class MedicalRecordMapper
         if (document == null)
             throw new ArgumentNullException(nameof(document));
 
-        // Convertir controles
         var controls = (document.Controls ?? new List<ControlDocument>())
             .Select(c => new Control(
                 c.Id,
@@ -20,52 +19,60 @@ public static class MedicalRecordMapper
                 new HemoglobinLevel(c.HemoglobinLevel)
             )).ToList();
 
-        // Convertir antecedentes
         var antecedentes = (document.Antecedentes ?? new List<AntecedenteDocument>())
             .Select(a => new Antecedente(a.Type, a.Description)).ToList();
 
-        // Convertir síntomas
         var sintomas = document.Sintomas ?? new List<string>();
 
         return new MedicalRecord(
-            document.MedicalRecordId,                          // id
-            document.CreatedAt,                                // createdAt
-            new Weight(document.Weight),                       // weight
-            new Height(document.Height),                       // height
-            GenderExtensions.FromString(document.Gender),      // gender
-            new MotivoConsulta(document.MotivoConsulta),       // motivoConsulta
-            new Observaciones(document.Observaciones ?? string.Empty), // observaciones
-            document.PatientId,                                // patientId
-            document.NurseId,                                  // nurseId (opcional)
+            document.MedicalRecordId,
+            document.CreatedAt,
+            new Weight(document.Weight),
+            new Height(document.Height),
+            GenderExtensions.FromString(document.Gender),
+            new MotivoConsulta(document.MotivoConsulta),
+            new Observaciones(document.Observaciones ?? string.Empty),
+            document.PatientId,
+            document.NurseId,
             document.HemoglobinLevel.HasValue 
                 ? new HemoglobinLevel(document.HemoglobinLevel.Value) 
-                : null,                                        // hemoglobinLevel (opcional)
-            antecedentes,                                      // antecedentes
-            sintomas,                                          // sintomas
-            controls                                           // controls
+                : null,
+            antecedentes,
+            sintomas,
+            controls
         );
     }
 
-    public static object ToPersistence(MedicalRecord medicalRecord)
+    public static MedicalRecordDocument ToPersistence(MedicalRecord medicalRecord)
     {
         var data = medicalRecord.ToPrimitives();
 
-        return new
+        return new MedicalRecordDocument
         {
-            id = data.Id,
-            patientId = data.PatientId,
-            nurseId = data.NurseId,
-            createdAt = data.CreatedAt,
-            updatedAt = data.UpdatedAt,
-            hemoglobinLevel = data.HemoglobinLevel,
-            weight = data.Weight,
-            height = data.Height,
-            gender = data.Gender,
-            antecedentes = data.Antecedentes,
-            motivoConsulta = data.MotivoConsulta,
-            observaciones = data.Observaciones,
-            sintomas = data.Sintomas,
-            controls = data.Controls
+            MedicalRecordId = data.Id,
+            PatientId = data.PatientId,
+            NurseId = data.NurseId,
+            CreatedAt = data.CreatedAt,
+            UpdatedAt = data.UpdatedAt,
+            HemoglobinLevel = data.HemoglobinLevel,
+            Weight = data.Weight,
+            Height = data.Height,
+            Gender = data.Gender,
+            MotivoConsulta = data.MotivoConsulta,
+            Observaciones = data.Observaciones,
+            Antecedentes = data.Antecedentes.Select(a => new AntecedenteDocument 
+            { 
+                Type = a.Type, 
+                Description = a.Description 
+            }).ToList(),
+            Sintomas = data.Sintomas,
+            Controls = data.Controls.Select(c => new ControlDocument
+            {
+                Id = c.Id,
+                Date = c.Date,
+                HemoglobinLevel = c.HemoglobinLevel,
+                AnemiaStatus = c.AnemiaStatus
+            }).ToList()
         };
     }
 }

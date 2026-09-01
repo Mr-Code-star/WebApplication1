@@ -22,35 +22,7 @@ public class MongoMedicalRecordRepository : IMedicalRecordRepository
 
     public async Task<MedicalRecord> SaveAsync(MedicalRecord medicalRecord)
     {
-        var data = MedicalRecordMapper.ToPersistence(medicalRecord);
-    
-        var document = new MedicalRecordDocument
-        {
-            MedicalRecordId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-            PatientId = (string)data.GetType().GetProperty("patientId")?.GetValue(data, null)!,
-            NurseId = (string?)data.GetType().GetProperty("nurseId")?.GetValue(data, null),
-            CreatedAt = (DateTime)data.GetType().GetProperty("createdAt")?.GetValue(data, null)!,
-            UpdatedAt = (DateTime)data.GetType().GetProperty("updatedAt")?.GetValue(data, null)!,
-            HemoglobinLevel = (double?)data.GetType().GetProperty("hemoglobinLevel")?.GetValue(data, null),
-            Weight = (double)data.GetType().GetProperty("weight")?.GetValue(data, null)!,
-            Height = (double)data.GetType().GetProperty("height")?.GetValue(data, null)!,
-            Gender = (string)data.GetType().GetProperty("gender")?.GetValue(data, null)!,
-            Antecedentes = ((IEnumerable<dynamic>)data.GetType().GetProperty("antecedentes")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
-                .Select(a => new AntecedenteDocument { Type = a.Type, Description = a.Description }).ToList(),
-            MotivoConsulta = (string)data.GetType().GetProperty("motivoConsulta")?.GetValue(data, null)!,
-            Observaciones = (string?)data.GetType().GetProperty("observaciones")?.GetValue(data, null),
-            Sintomas = ((IEnumerable<dynamic>)data.GetType().GetProperty("sintomas")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
-                .Select(s => (string)s).ToList(),
-            Controls = ((IEnumerable<dynamic>)data.GetType().GetProperty("controls")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
-                .Select(c => new ControlDocument
-                {
-                    Id = c.Id,
-                    Date = c.Date,
-                    HemoglobinLevel = c.HemoglobinLevel,
-                    AnemiaStatus = c.AnemiaStatus
-                }).ToList()
-        };
-
+        var document = MedicalRecordMapper.ToPersistence(medicalRecord);
         await _collection.InsertOneAsync(document);
         return medicalRecord;
     }

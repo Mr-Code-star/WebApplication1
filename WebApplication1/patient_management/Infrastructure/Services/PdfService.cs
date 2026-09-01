@@ -1,89 +1,103 @@
-﻿namespace WebApplication1.patient_management.Infrastructure.Services;
-
-using iText.Kernel.Pdf;
+﻿using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Element;
+using WebApplication1.patient_management.Domain.Aggregate;
+using WebApplication1.patient_management.Domain.Entities;
 
+namespace WebApplication1.patient_management.Infrastructure.Services;
 
 public static class PdfService
 {
-    public static async Task<byte[]> GenerateMedicalRecordPdfAsync(object patient, object medicalRecord)
+    public static async Task<byte[]> GenerateMedicalRecordPdfAsync(Patient patient, MedicalRecord medicalRecord)
     {
+        if (patient == null)
+            throw new ArgumentNullException(nameof(patient));
+        
+        if (medicalRecord == null)
+            throw new ArgumentNullException(nameof(medicalRecord));
+
+        var patientData = patient.ToPrimitives();
+        var medicalData = medicalRecord.ToPrimitives();
+
         using var memoryStream = new MemoryStream();
-        using var writer = new PdfWriter(memoryStream);
-        using var pdf = new PdfDocument(writer);
-        using var document = new Document(pdf);
+        var writer = new PdfWriter(memoryStream);
+        var pdf = new PdfDocument(writer);
+        var document = new Document(pdf);
 
-        document.Add(new Paragraph("Medical Record Report").SetFontSize(18));
-        document.Add(new Paragraph($"Patient: {GetProperty(patient, "Name")} {GetProperty(patient, "LastName")}"));
-        document.Add(new Paragraph($"Gender: {GetProperty(patient, "Gender")}"));
-        document.Add(new Paragraph($"Status: {GetProperty(patient, "Status")}"));
-        document.Add(new Paragraph($"Weight: {GetProperty(medicalRecord, "Weight")} kg"));
-        document.Add(new Paragraph($"Height: {GetProperty(medicalRecord, "Height")} cm"));
-        document.Add(new Paragraph($"Hemoglobin Level: {GetProperty(medicalRecord, "HemoglobinLevel") ?? "Not registered"}"));
-        document.Add(new Paragraph($"Consult Reason: {GetProperty(medicalRecord, "MotivoConsulta")}"));
-        document.Add(new Paragraph($"Observations: {GetProperty(medicalRecord, "Observaciones") ?? "None"}"));
+        // Título
+        document.Add(new Paragraph("HISTORIA CLÍNICA")
+            .SetFontSize(20)
+            .SetBold()
+            .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER));
+        
+        document.Add(new Paragraph($"Fecha de generación: {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC")
+            .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER));
+        
+        document.Add(new Paragraph(" "));
 
-        document.Add(new Paragraph("Symptoms:"));
-        var sintomas = GetProperty(medicalRecord, "Sintomas") as List<string> ?? new List<string>();
-        foreach (var symptom in sintomas)
+        // Datos básicos
+        document.Add(new Paragraph($"Paciente: {patientData.Name} {patientData.LastName}"));
+        document.Add(new Paragraph($"ID: {patientData.Id}"));
+        document.Add(new Paragraph($"Fecha de nacimiento: {patientData.BirthDate:dd/MM/yyyy}"));
+        document.Add(new Paragraph($"Peso: {patientData.CurrentWeight:F2} kg"));
+        document.Add(new Paragraph($"Altura: {patientData.CurrentHeight:F2} cm"));
+        
+        document.Add(new Paragraph(" "));
+        document.Add(new Paragraph($"Motivo de consulta: {medicalData.MotivoConsulta}"));
+        document.Add(new Paragraph($"Observaciones: {(string.IsNullOrEmpty(medicalData.Observaciones) ? "Ninguna" : medicalData.Observaciones)}"));
+
+        if (medicalData.HemoglobinLevel.HasValue)
         {
-            document.Add(new Paragraph($"- {symptom}"));
-        }
-
-        document.Add(new Paragraph("Antecedents:"));
-        var antecedentes = GetProperty(medicalRecord, "Antecedentes") as List<dynamic> ?? new List<dynamic>();
-        foreach (var a in antecedentes)
-        {
-            document.Add(new Paragraph($"- {GetProperty(a, "Type")}: {GetProperty(a, "Description")}"));
+            document.Add(new Paragraph($"Hemoglobina actual: {medicalData.HemoglobinLevel.Value:F2} g/dL"));
         }
 
         document.Close();
+        pdf.Close();
+        writer.Close();
+
         return memoryStream.ToArray();
     }
 
-    public static async Task<byte[]> GenerateHemoglobinReportPdfAsync(object medicalRecord)
+    public static async Task<byte[]> GenerateHemoglobinReportPdfAsync(MedicalRecord medicalRecord)
     {
+        if (medicalRecord == null)
+            throw new ArgumentNullException(nameof(medicalRecord));
+
+        var medicalData = medicalRecord.ToPrimitives();
+
         using var memoryStream = new MemoryStream();
-        using var writer = new PdfWriter(memoryStream);
-        using var pdf = new PdfDocument(writer);
-        using var document = new Document(pdf);
+        var writer = new PdfWriter(memoryStream);
+        var pdf = new PdfDocument(writer);
+        var document = new Document(pdf);
 
-        document.Add(new Paragraph("Hemoglobin Controls Report").SetFontSize(18));
+        document.Add(new Paragraph("REPORTE DE HEMOGLOBINA")
+            .SetFontSize(20)
+            .SetBold()
+            .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER));
+        
+        document.Add(new Paragraph($"Fecha de generación: {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC")
+            .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER));
 
-        var controls = GetProperty(medicalRecord, "Controls") as List<dynamic> ?? new List<dynamic>();
+        var controls = medicalData.Controls.OrderByDescending(c => c.Date).ToList();
 
-        if (controls.Count == 0)
+        if (controls.Any())
         {
-            document.Add(new Paragraph("No hemoglobin controls registered yet."));
-            document.Close();
-            return memoryStream.ToArray();
-        }
-
-        double total = 0;
-        foreach (var control in controls)
-        {
-            var hemoglobin = (double?)GetProperty(control, "HemoglobinLevel");
-            if (hemoglobin.HasValue)
+            foreach (var control in controls)
             {
-                total += hemoglobin.Value;
-                document.Add(new Paragraph($"Date: {GetProperty(control, "Date")}"));
-                document.Add(new Paragraph($"Hemoglobin: {hemoglobin.Value} g/dL"));
-                document.Add(new Paragraph($"Status: {GetProperty(control, "AnemiaStatus") ?? "N/A"}"));
+                document.Add(new Paragraph($"Fecha: {control.Date:dd/MM/yyyy HH:mm}"));
+                document.Add(new Paragraph($"Nivel: {(control.HemoglobinLevel.HasValue ? $"{control.HemoglobinLevel.Value:F2} g/dL" : "N/A")}"));
+                document.Add(new Paragraph(" "));
             }
         }
-
-        var average = controls.Count > 0 ? total / controls.Count : 0;
-
-        document.Add(new Paragraph($"Total Controls: {controls.Count}"));
-        document.Add(new Paragraph($"Average Hemoglobin: {average:F2} g/dL"));
+        else
+        {
+            document.Add(new Paragraph("No hay controles de hemoglobina registrados."));
+        }
 
         document.Close();
-        return memoryStream.ToArray();
-    }
+        pdf.Close();
+        writer.Close();
 
-    private static object? GetProperty(object obj, string propertyName)
-    {
-        return obj.GetType().GetProperty(propertyName)?.GetValue(obj);
+        return memoryStream.ToArray();
     }
 }

@@ -96,7 +96,7 @@ public class PatientQueryServiceImpl : IPatientQueryService
             throw new Exception("Medical record not found");
         }
 
-        return await PdfService.GenerateHemoglobinReportPdfAsync(medicalRecord.ToPrimitives());
+        return await PdfService.GenerateHemoglobinReportPdfAsync(medicalRecord);
     }
 
     public async Task<byte[]> DownloadMedicalRecordPdfAsync(DownloadMedicalRecordPdfQuery query)
@@ -108,15 +108,14 @@ public class PatientQueryServiceImpl : IPatientQueryService
             throw new Exception("Medical record not found");
         }
 
-        var medicalData = medicalRecord.ToPrimitives();
-        var patient = await _patientRepository.FindByIdAsync(medicalData.PatientId);
+        var patient = await _patientRepository.FindByIdAsync(medicalRecord.PatientId);
 
         if (patient == null)
         {
             throw new Exception("Patient not found");
         }
 
-        return await PdfService.GenerateMedicalRecordPdfAsync(patient.ToPrimitives(), medicalData);
+        return await PdfService.GenerateMedicalRecordPdfAsync(patient, medicalRecord);
     }
 
     // PatientQueryServiceImpl.cs

@@ -450,10 +450,6 @@ public class PatientManagementController : ControllerBase
         }
     }
 
-    // ==========================================
-    // 11. DESCARGAR PDF HISTORIA CLÍNICA
-    // ==========================================
-
     [HttpGet("medical-record/{medicalRecordId}/pdf")]
     [Authorize]
     [RequireRole("Nurse")] 
@@ -461,10 +457,13 @@ public class PatientManagementController : ControllerBase
     {
         try
         {
+            Console.WriteLine($"🔍 DownloadMedicalRecordPdf - medicalRecordId: {medicalRecordId}");
+
             var nurseId = User.FindFirst("nurseId")?.Value;
 
             if (string.IsNullOrEmpty(nurseId))
             {
+                Console.WriteLine("❌ Nurse ID not found");
                 return BadRequest(new { error = "Nurse ID no encontrado en el token" });
             }
 
@@ -478,18 +477,23 @@ public class PatientManagementController : ControllerBase
             var query = new DownloadMedicalRecordPdfQuery(medicalRecordId);
             var pdf = await _patientFacade.DownloadMedicalRecordPdfAsync(query);
 
-            return File(pdf, "application/pdf", "medical-record.pdf");
+            if (pdf == null || pdf.Length == 0)
+            {
+                Console.WriteLine("❌ PDF generation returned empty");
+                return BadRequest(new { error = "No se pudo generar el PDF" });
+            }
+
+            Console.WriteLine($"✅ PDF generated successfully: {pdf.Length} bytes");
+            return File(pdf, "application/pdf", $"medical-record-{medicalRecordId}.pdf");
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"❌ Error en DownloadMedicalRecordPdf: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
             return BadRequest(new { error = ex.Message });
         }
     }
-
-    // ==========================================
-    // 12. DESCARGAR REPORTE HEMOGLOBINA PDF
-    // ==========================================
-
+    
     [HttpGet("medical-record/{medicalRecordId}/hemoglobin-report")]
     [Authorize]
     [RequireRole("Nurse")] 
@@ -497,10 +501,13 @@ public class PatientManagementController : ControllerBase
     {
         try
         {
+            Console.WriteLine($"🔍 DownloadHemoglobinReportPdf - medicalRecordId: {medicalRecordId}");
+
             var nurseId = User.FindFirst("nurseId")?.Value;
 
             if (string.IsNullOrEmpty(nurseId))
             {
+                Console.WriteLine("❌ Nurse ID not found");
                 return BadRequest(new { error = "Nurse ID no encontrado en el token" });
             }
 
@@ -514,14 +521,22 @@ public class PatientManagementController : ControllerBase
             var query = new DownloadHemoglobinReportPdfQuery(medicalRecordId);
             var pdf = await _patientFacade.DownloadHemoglobinReportPdfAsync(query);
 
-            return File(pdf, "application/pdf", "hemoglobin-report.pdf");
+            if (pdf == null || pdf.Length == 0)
+            {
+                Console.WriteLine("❌ PDF generation returned empty");
+                return BadRequest(new { error = "No se pudo generar el PDF" });
+            }
+
+            Console.WriteLine($"✅ PDF generated successfully: {pdf.Length} bytes");
+            return File(pdf, "application/pdf", $"hemoglobin-report-{medicalRecordId}.pdf");
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"❌ Error en DownloadHemoglobinReportPdf: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
             return BadRequest(new { error = ex.Message });
         }
     }
-
     // ==========================================
     // 13. BUSCAR MADRE POR DNI
     // ==========================================
