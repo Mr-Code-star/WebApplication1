@@ -1,5 +1,8 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -74,6 +77,42 @@ builder.Services.AddScoped<IMongoDatabase>(sp =>
 // ✅ 3. REGISTRAR EVENT PUBLISHER (SINGLETON)
 // ==========================================
 builder.Services.AddSingleton<EventPublisher>();
+
+// ==========================================
+// ✅ 3. CONFIGURAR AUTENTICACIÓN JWT
+// ==========================================
+
+// Obtener la clave secreta JWT
+var jwtSecret = builder.Configuration["JWT_SECRET"];
+
+// Asegurar clave mínima de 32 caracteres
+if (jwtSecret.Length < 32)
+{
+    jwtSecret = jwtSecret.PadRight(32, '!');
+}
+
+var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+// ✅ REGISTRAR AUTENTICACIÓN
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 // ==========================================
 // 1. REGISTRAR SERVICIOS IAM (Identity & Access Management)

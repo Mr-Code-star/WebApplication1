@@ -7,7 +7,6 @@ using WebApplication1.NutritionDiary.Infrastructure.Persitencia.Models;
 
 namespace WebApplication1.NutritionDiary.Infrastructure.Persitencia.Repositories;
 
-
 public class MongoFoodItemRepository : IFoodItemRepository
 {
     private readonly IMongoCollection<FoodItemDocument> _collection;
@@ -34,7 +33,7 @@ public class MongoFoodItemRepository : IFoodItemRepository
         var filter = Builders<FoodItemDocument>.Filter.Eq(x => x.Category, category);
         var documents = await _collection.Find(filter).ToListAsync();
 
-        return documents.Select(FoodItemMapper.ToDomain).ToList();
+        return FoodItemMapper.ToDomainList(documents);
     }
 
     public async Task<List<FoodItem>> SearchByNameAsync(string searchText)
@@ -42,6 +41,6 @@ public class MongoFoodItemRepository : IFoodItemRepository
         var filter = Builders<FoodItemDocument>.Filter.Regex(x => x.Name, new BsonRegularExpression(searchText, "i"));
         var documents = await _collection.Find(filter).ToListAsync();
 
-        return documents.Select(FoodItemMapper.ToDomain).ToList();
+        return FoodItemMapper.ToDomainList(documents);
     }
 }

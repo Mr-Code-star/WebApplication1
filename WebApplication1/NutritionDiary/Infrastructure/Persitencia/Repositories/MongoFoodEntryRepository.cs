@@ -1,13 +1,11 @@
-﻿using WebApplication1.NutritionDiary.Domain.Models.Entities;
+﻿using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
+using WebApplication1.NutritionDiary.Domain.Models.Entities;
 using WebApplication1.NutritionDiary.Domain.Repositories;
 using WebApplication1.NutritionDiary.Infrastructure.Mappers;
 using WebApplication1.NutritionDiary.Infrastructure.Persitencia.Models;
 
 namespace WebApplication1.NutritionDiary.Infrastructure.Persitencia.Repositories;
-
-using Microsoft.Extensions.Logging;
-using MongoDB.Driver;
-
 
 public class MongoFoodEntryRepository : IFoodEntryRepository
 {
@@ -22,19 +20,7 @@ public class MongoFoodEntryRepository : IFoodEntryRepository
 
     public async Task SaveAsync(FoodEntry entry)
     {
-        var data = FoodEntryMapper.ToPersistence(entry);
-
-        var document = new FoodEntryDocument
-        {
-            FoodEntryId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-            DiaryId = (string)data.GetType().GetProperty("diaryId")?.GetValue(data, null)!,
-            FoodItemId = (string)data.GetType().GetProperty("foodItemId")?.GetValue(data, null)!,
-            Quantity = (double)data.GetType().GetProperty("quantity")?.GetValue(data, null)!,
-            Unit = (string)data.GetType().GetProperty("unit")?.GetValue(data, null)!,
-            IronContributed = (double)data.GetType().GetProperty("ironContributed")?.GetValue(data, null)!,
-            RegisteredAt = (DateTime)data.GetType().GetProperty("registeredAt")?.GetValue(data, null)!
-        };
-
+        var document = FoodEntryMapper.ToPersistence(entry);
         await _collection.InsertOneAsync(document);
         _logger.LogInformation("Food entry guardado: {FoodEntryId}", document.FoodEntryId);
     }
@@ -44,7 +30,7 @@ public class MongoFoodEntryRepository : IFoodEntryRepository
         var filter = Builders<FoodEntryDocument>.Filter.Eq(x => x.DiaryId, diaryId);
         var documents = await _collection.Find(filter).ToListAsync();
 
-        return documents.Select(FoodEntryMapper.ToDomain).ToList();
+        return FoodEntryMapper.ToDomainList(documents);
     }
 
     public async Task<int> CountByDiaryIdAsync(string diaryId)

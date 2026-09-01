@@ -1,48 +1,60 @@
 ﻿using WebApplication1.patient_management.Domain.Aggregate;
 using WebApplication1.patient_management.Domain.Enums;
 using WebApplication1.patient_management.Domain.ValueObjects;
+using WebApplication1.patient_management.Infrastructure.Persitencia.MongoDb.Models;
 
 namespace WebApplication1.patient_management.Infrastructure.Mapper;
 
-
-
-
 public static class PatientMapper
 {
-    public static Patient ToDomain(dynamic document)
+    public static Patient ToDomain(PatientDocument document)
     {
+        if (document == null)
+            throw new ArgumentNullException(nameof(document));
+
+        // ✅ Usar PatientId (no id)
         return new Patient(
-            document.id,
-            document.name,
-            document.lastName,
-            new BirthDate((DateTime)document.birthDate),
-            new Weight((double)document.currentWeight),
-            new Height((double)document.currentHeight),
-            document.motherId,
-            GenderExtensions.FromString(document.gender),
-            document.nurseId,
-            document.facilityId,
-            PatientStatusExtensions.FromString(document.status)
+            document.PatientId,
+            document.Name,
+            document.LastName,
+            new BirthDate(document.BirthDate),
+            new Weight(document.CurrentWeight),
+            new Height(document.CurrentHeight),
+            document.MotherId,
+            GenderExtensions.FromString(document.Gender),
+            document.NurseId,
+            document.FacilityId,
+            PatientStatusExtensions.FromString(document.Status)
         );
     }
 
-    public static object ToPersistence(Patient patient)
+    public static PatientDocument ToPersistence(Patient patient)
     {
+        if (patient == null)
+            throw new ArgumentNullException(nameof(patient));
+
         var data = patient.ToPrimitives();
 
-        return new
+        return new PatientDocument
         {
-            id = data.Id,
-            name = data.Name,
-            lastName = data.LastName,
-            birthDate = data.BirthDate,
-            currentWeight = data.CurrentWeight,
-            currentHeight = data.CurrentHeight,
-            motherId = data.MotherId,
-            nurseId = data.NurseId,
-            gender = data.Gender,
-            facilityId = data.FacilityId,
-            status = data.Status
+            PatientId = data.Id,
+            Name = data.Name,
+            LastName = data.LastName,
+            BirthDate = data.BirthDate,
+            CurrentWeight = data.CurrentWeight,
+            CurrentHeight = data.CurrentHeight,
+            MotherId = data.MotherId,
+            NurseId = data.NurseId,
+            Gender = data.Gender,
+            FacilityId = data.FacilityId,
+            Status = data.Status,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
+    }
+
+    public static List<Patient> ToDomainList(IEnumerable<PatientDocument> documents)
+    {
+        return documents.Select(ToDomain).ToList();
     }
 }

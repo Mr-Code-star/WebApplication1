@@ -24,25 +24,10 @@ public class MongoPatientRepository : IPatientRepository
 
     public async Task<Patient> SaveAsync(Patient patient)
     {
-        var data = PatientMapper.ToPersistence(patient);
-        var document = new PatientDocument
-        {
-            PatientId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-            Name = (string)data.GetType().GetProperty("name")?.GetValue(data, null)!,
-            LastName = (string)data.GetType().GetProperty("lastName")?.GetValue(data, null)!,
-            BirthDate = (DateTime)data.GetType().GetProperty("birthDate")?.GetValue(data, null)!,
-            CurrentWeight = (double)data.GetType().GetProperty("currentWeight")?.GetValue(data, null)!,
-            CurrentHeight = (double)data.GetType().GetProperty("currentHeight")?.GetValue(data, null)!,
-            MotherId = (string)data.GetType().GetProperty("motherId")?.GetValue(data, null)!,
-            NurseId = (string?)data.GetType().GetProperty("nurseId")?.GetValue(data, null),
-            Gender = (string)data.GetType().GetProperty("gender")?.GetValue(data, null)!,
-            FacilityId = (string?)data.GetType().GetProperty("facilityId")?.GetValue(data, null),
-            Status = (string)data.GetType().GetProperty("status")?.GetValue(data, null)!,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
+        // ✅ Usar ToPersistence que ahora retorna PatientDocument
+        var document = PatientMapper.ToPersistence(patient);
         await _collection.InsertOneAsync(document);
+        _logger.LogInformation("Paciente creado: {PatientId}", document.PatientId);
         return patient;
     }
 

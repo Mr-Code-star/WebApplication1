@@ -19,35 +19,22 @@ public class MongoNutritionalDiaryRepository : INutritionalDiaryRepository
 
     public async Task SaveAsync(NutritionalDiary diary)
     {
-        var data = NutritionalDiaryMapper.ToPersistence(diary);
-
-        var document = new NutritionalDiaryDocument
-        {
-            NutritionalDiaryId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-            PatientId = (string)data.GetType().GetProperty("patientId")?.GetValue(data, null)!,
-            MotherId = (string)data.GetType().GetProperty("motherId")?.GetValue(data, null)!,
-            Date = (DateTime)data.GetType().GetProperty("date")?.GetValue(data, null)!,
-            TotalIronAbsorbed = (double)data.GetType().GetProperty("totalIronAbsorbed")?.GetValue(data, null)!,
-            HasInhibitor = (bool)data.GetType().GetProperty("hasInhibitor")?.GetValue(data, null)!
-        };
-
+        var document = NutritionalDiaryMapper.ToPersistence(diary);
         await _collection.InsertOneAsync(document);
         _logger.LogInformation("Diario nutricional guardado: {NutritionalDiaryId}", document.NutritionalDiaryId);
     }
 
     public async Task UpdateAsync(NutritionalDiary diary)
     {
-        var data = NutritionalDiaryMapper.ToPersistence(diary);
-        var diaryId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!;
-
-        var filter = Builders<NutritionalDiaryDocument>.Filter.Eq(x => x.NutritionalDiaryId, diaryId);
+        var document = NutritionalDiaryMapper.ToPersistence(diary);
+        var filter = Builders<NutritionalDiaryDocument>.Filter.Eq(x => x.NutritionalDiaryId, document.NutritionalDiaryId);
 
         var update = Builders<NutritionalDiaryDocument>.Update
-            .Set(x => x.TotalIronAbsorbed, (double)data.GetType().GetProperty("totalIronAbsorbed")?.GetValue(data, null)!)
-            .Set(x => x.HasInhibitor, (bool)data.GetType().GetProperty("hasInhibitor")?.GetValue(data, null)!);
+            .Set(x => x.TotalIronAbsorbed, document.TotalIronAbsorbed)
+            .Set(x => x.HasInhibitor, document.HasInhibitor);
 
         await _collection.UpdateOneAsync(filter, update);
-        _logger.LogInformation("Diario nutricional actualizado: {NutritionalDiaryId}", diaryId);
+        _logger.LogInformation("Diario nutricional actualizado: {NutritionalDiaryId}", document.NutritionalDiaryId);
     }
 
     public async Task<NutritionalDiary?> FindTodayByPatientIdAsync(string patientId)
@@ -82,6 +69,6 @@ public class MongoNutritionalDiaryRepository : INutritionalDiaryRepository
 
         var documents = await _collection.Find(filter).ToListAsync();
 
-        return documents.Select(NutritionalDiaryMapper.ToDomain).ToList();
+        return NutritionalDiaryMapper.ToDomainList(documents);
     }
 }

@@ -1,28 +1,51 @@
 ﻿using WebApplication1.NutritionDiary.Domain.Models.Entities;
 using WebApplication1.NutritionDiary.Domain.Models.ValueObjects;
+using WebApplication1.NutritionDiary.Infrastructure.Persitencia.Models;
 
 namespace WebApplication1.NutritionDiary.Infrastructure.Mappers;
 
-
-
 public static class FoodItemMapper
 {
-    public static FoodItem ToDomain(dynamic document)
+    public static FoodItem ToDomain(FoodItemDocument document)
     {
+        if (document == null)
+            throw new ArgumentNullException(nameof(document));
+
         return new FoodItem(
-            document.id,
-            document.name,
+            document.FoodItemId,  // ✅ Usar FoodItemId
+            document.Name,
             new NutrientContent(
-                document.nutrientContent.ironMg,
-                document.nutrientContent.ironType
+                document.NutrientContent.IronMg,
+                document.NutrientContent.IronType
             ),
-            document.isInhibitor,
-            FoodCategoryExtensions.FromString(document.category)
+            document.IsInhibitor,
+            FoodCategoryExtensions.FromString(document.Category)
         );
     }
 
-    public static object ToPersistence(FoodItem foodItem)
+    public static FoodItemDocument ToPersistence(FoodItem foodItem)
     {
-        return foodItem.ToPrimitives();
+        if (foodItem == null)
+            throw new ArgumentNullException(nameof(foodItem));
+
+        var data = foodItem.ToPrimitives();
+
+        return new FoodItemDocument
+        {
+            FoodItemId = data.Id,
+            Name = data.Name,
+            NutrientContent = new NutrientContentDocument
+            {
+                IronMg = data.NutrientContent.IronMg,
+                IronType = data.NutrientContent.IronType
+            },
+            IsInhibitor = data.IsInhibitor,
+            Category = data.Category
+        };
+    }
+
+    public static List<FoodItem> ToDomainList(IEnumerable<FoodItemDocument> documents)
+    {
+        return documents.Select(ToDomain).ToList();
     }
 }

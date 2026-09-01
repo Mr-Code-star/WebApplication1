@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
-using WebApplication1.shared.Scripts.Models;
+using WebApplication1.NutritionDiary.Infrastructure.Persitencia.Models;
 
 namespace WebApplication1.Services;
 
@@ -25,12 +25,9 @@ public class DatabaseSeeder : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        // ✅ Crear un scope para obtener servicios scoped
         using var scope = _scopeFactory.CreateScope();
-        
-        // ✅ Obtener IMongoDatabase del scope
         var database = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
-        var foodItemCollection = database.GetCollection<FoodItem>("fooditems");
+        var foodItemCollection = database.GetCollection<FoodItemDocument>("fooditems");
 
         try
         {
@@ -38,7 +35,7 @@ public class DatabaseSeeder : IHostedService
 
             // Verificar si ya existen datos
             var existingCount = await foodItemCollection.CountDocumentsAsync(
-                FilterDefinition<FoodItem>.Empty,
+                FilterDefinition<FoodItemDocument>.Empty,
                 cancellationToken: cancellationToken
             );
 
@@ -51,7 +48,7 @@ public class DatabaseSeeder : IHostedService
             // Obtener los alimentos
             var foodItems = GetFoodItems();
 
-            // Insertar en lotes (mejor performance)
+            // Insertar en lotes
             var batchSize = 50;
             for (int i = 0; i < foodItems.Count; i += batchSize)
             {
@@ -60,7 +57,11 @@ public class DatabaseSeeder : IHostedService
                 _logger.LogInformation("📦 Lote {BatchNumber} insertado: {Count} items", (i / batchSize) + 1, batch.Count());
             }
 
-            _logger.LogInformation("✅ Seed completado exitosamente. Insertados: {Count} items", foodItems.Count);
+            var finalCount = await foodItemCollection.CountDocumentsAsync(
+                FilterDefinition<FoodItemDocument>.Empty,
+                cancellationToken: cancellationToken
+            );
+            _logger.LogInformation("✅ Seed completado exitosamente. Insertados: {Count} items", finalCount);
         }
         catch (Exception ex)
         {
@@ -74,77 +75,74 @@ public class DatabaseSeeder : IHostedService
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Lista completa de alimentos
-    /// </summary>
-    private List<FoodItem> GetFoodItems()
+    private List<FoodItemDocument> GetFoodItems()
     {
-        return new List<FoodItem>
+        return new List<FoodItemDocument>
         {
             // ==========================================
             // CARNES (MEAT)
             // ==========================================
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_001", 
+                FoodItemId = "FOOD_001", 
                 Name = "Sangrecita de pollo", 
-                NutrientContent = new NutrientContent { IronMg = 29.5, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 29.5, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "MEAT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_002", 
+                FoodItemId = "FOOD_002", 
                 Name = "Bazo de res", 
-                NutrientContent = new NutrientContent { IronMg = 14.0, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 14.0, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "MEAT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_003", 
+                FoodItemId = "FOOD_003", 
                 Name = "Hígado de pollo", 
-                NutrientContent = new NutrientContent { IronMg = 8.5, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 8.5, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "MEAT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_004", 
+                FoodItemId = "FOOD_004", 
                 Name = "Hígado de res", 
-                NutrientContent = new NutrientContent { IronMg = 6.5, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 6.5, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "MEAT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_005", 
+                FoodItemId = "FOOD_005", 
                 Name = "Carne de res", 
-                NutrientContent = new NutrientContent { IronMg = 2.7, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 2.7, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "MEAT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_006", 
+                FoodItemId = "FOOD_006", 
                 Name = "Pavo", 
-                NutrientContent = new NutrientContent { IronMg = 1.8, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.8, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "MEAT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_007", 
+                FoodItemId = "FOOD_007", 
                 Name = "Huevo entero cocido", 
-                NutrientContent = new NutrientContent { IronMg = 1.8, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.8, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "MEAT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_008", 
+                FoodItemId = "FOOD_008", 
                 Name = "Pollo", 
-                NutrientContent = new NutrientContent { IronMg = 1.3, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.3, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "MEAT" 
             },
@@ -152,35 +150,35 @@ public class DatabaseSeeder : IHostedService
             // ==========================================
             // PESCADOS (FISH)
             // ==========================================
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_009", 
+                FoodItemId = "FOOD_009", 
                 Name = "Anchoveta", 
-                NutrientContent = new NutrientContent { IronMg = 3.2, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 3.2, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "FISH" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_010", 
+                FoodItemId = "FOOD_010", 
                 Name = "Sardina en conserva", 
-                NutrientContent = new NutrientContent { IronMg = 2.9, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 2.9, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "FISH" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_011", 
+                FoodItemId = "FOOD_011", 
                 Name = "Atún en conserva", 
-                NutrientContent = new NutrientContent { IronMg = 1.9, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.9, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "FISH" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_012", 
+                FoodItemId = "FOOD_012", 
                 Name = "Bonito", 
-                NutrientContent = new NutrientContent { IronMg = 1.5, IronType = "hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.5, IronType = "hemo" },
                 IsInhibitor = false, 
                 Category = "FISH" 
             },
@@ -188,43 +186,43 @@ public class DatabaseSeeder : IHostedService
             // ==========================================
             // LEGUMBRES (LEGUME)
             // ==========================================
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_013", 
+                FoodItemId = "FOOD_013", 
                 Name = "Lentejas cocidas", 
-                NutrientContent = new NutrientContent { IronMg = 3.3, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 3.3, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "LEGUME" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_014", 
+                FoodItemId = "FOOD_014", 
                 Name = "Garbanzos cocidos", 
-                NutrientContent = new NutrientContent { IronMg = 2.9, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 2.9, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "LEGUME" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_015", 
+                FoodItemId = "FOOD_015", 
                 Name = "Pallares cocidos", 
-                NutrientContent = new NutrientContent { IronMg = 2.5, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 2.5, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "LEGUME" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_016", 
+                FoodItemId = "FOOD_016", 
                 Name = "Frijoles cocidos", 
-                NutrientContent = new NutrientContent { IronMg = 2.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 2.1, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "LEGUME" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_017", 
+                FoodItemId = "FOOD_017", 
                 Name = "Arvejas cocidas", 
-                NutrientContent = new NutrientContent { IronMg = 1.8, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.8, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "LEGUME" 
             },
@@ -232,59 +230,59 @@ public class DatabaseSeeder : IHostedService
             // ==========================================
             // VEGETALES (VEGETABLE)
             // ==========================================
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_018", 
+                FoodItemId = "FOOD_018", 
                 Name = "Espinaca cocida", 
-                NutrientContent = new NutrientContent { IronMg = 2.8, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 2.8, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "VEGETABLE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_019", 
+                FoodItemId = "FOOD_019", 
                 Name = "Acelga cocida", 
-                NutrientContent = new NutrientContent { IronMg = 1.8, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.8, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "VEGETABLE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_020", 
+                FoodItemId = "FOOD_020", 
                 Name = "Brócoli cocido", 
-                NutrientContent = new NutrientContent { IronMg = 0.7, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.7, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "VEGETABLE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_021", 
+                FoodItemId = "FOOD_021", 
                 Name = "Camote cocido", 
-                NutrientContent = new NutrientContent { IronMg = 0.7, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.7, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "VEGETABLE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_022", 
+                FoodItemId = "FOOD_022", 
                 Name = "Papa cocida", 
-                NutrientContent = new NutrientContent { IronMg = 0.5, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.5, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "VEGETABLE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_023", 
+                FoodItemId = "FOOD_023", 
                 Name = "Zanahoria cocida", 
-                NutrientContent = new NutrientContent { IronMg = 0.4, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.4, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "VEGETABLE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_024", 
+                FoodItemId = "FOOD_024", 
                 Name = "Zapallo cocido", 
-                NutrientContent = new NutrientContent { IronMg = 0.4, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.4, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "VEGETABLE" 
             },
@@ -292,43 +290,43 @@ public class DatabaseSeeder : IHostedService
             // ==========================================
             // CEREALES (GRAIN)
             // ==========================================
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_025", 
+                FoodItemId = "FOOD_025", 
                 Name = "Kiwicha cocida", 
-                NutrientContent = new NutrientContent { IronMg = 3.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 3.1, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "GRAIN" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_026", 
+                FoodItemId = "FOOD_026", 
                 Name = "Pan de trigo", 
-                NutrientContent = new NutrientContent { IronMg = 2.5, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 2.5, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "GRAIN" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_027", 
+                FoodItemId = "FOOD_027", 
                 Name = "Avena cocida", 
-                NutrientContent = new NutrientContent { IronMg = 1.7, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.7, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "GRAIN" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_028", 
+                FoodItemId = "FOOD_028", 
                 Name = "Quinua cocida", 
-                NutrientContent = new NutrientContent { IronMg = 1.5, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 1.5, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "GRAIN" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_029", 
+                FoodItemId = "FOOD_029", 
                 Name = "Arroz cocido", 
-                NutrientContent = new NutrientContent { IronMg = 0.2, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.2, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "GRAIN" 
             },
@@ -336,51 +334,51 @@ public class DatabaseSeeder : IHostedService
             // ==========================================
             // FRUTAS (FRUIT)
             // ==========================================
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_030", 
+                FoodItemId = "FOOD_030", 
                 Name = "Lúcuma", 
-                NutrientContent = new NutrientContent { IronMg = 0.4, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.4, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "FRUIT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_031", 
+                FoodItemId = "FOOD_031", 
                 Name = "Plátano", 
-                NutrientContent = new NutrientContent { IronMg = 0.3, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.3, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "FRUIT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_032", 
+                FoodItemId = "FOOD_032", 
                 Name = "Naranja", 
-                NutrientContent = new NutrientContent { IronMg = 0.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.1, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "FRUIT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_033", 
+                FoodItemId = "FOOD_033", 
                 Name = "Mandarina", 
-                NutrientContent = new NutrientContent { IronMg = 0.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.1, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "FRUIT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_034", 
+                FoodItemId = "FOOD_034", 
                 Name = "Mango", 
-                NutrientContent = new NutrientContent { IronMg = 0.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.1, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "FRUIT" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_035", 
+                FoodItemId = "FOOD_035", 
                 Name = "Papaya", 
-                NutrientContent = new NutrientContent { IronMg = 0.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.1, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "FRUIT" 
             },
@@ -388,27 +386,27 @@ public class DatabaseSeeder : IHostedService
             // ==========================================
             // LÁCTEOS (DAIRY) - INHIBIDORES
             // ==========================================
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_036", 
+                FoodItemId = "FOOD_036", 
                 Name = "Queso fresco", 
-                NutrientContent = new NutrientContent { IronMg = 0.2, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.2, IronType = "no-hemo" },
                 IsInhibitor = true, 
                 Category = "DAIRY" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_037", 
+                FoodItemId = "FOOD_037", 
                 Name = "Leche de vaca", 
-                NutrientContent = new NutrientContent { IronMg = 0.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.1, IronType = "no-hemo" },
                 IsInhibitor = true, 
                 Category = "DAIRY" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_038", 
+                FoodItemId = "FOOD_038", 
                 Name = "Yogur", 
-                NutrientContent = new NutrientContent { IronMg = 0.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.1, IronType = "no-hemo" },
                 IsInhibitor = true, 
                 Category = "DAIRY" 
             },
@@ -416,35 +414,35 @@ public class DatabaseSeeder : IHostedService
             // ==========================================
             // BEBIDAS (BEVERAGE)
             // ==========================================
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_039", 
+                FoodItemId = "FOOD_039", 
                 Name = "Té", 
-                NutrientContent = new NutrientContent { IronMg = 0.0, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.0, IronType = "no-hemo" },
                 IsInhibitor = true, 
                 Category = "BEVERAGE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_040", 
+                FoodItemId = "FOOD_040", 
                 Name = "Café", 
-                NutrientContent = new NutrientContent { IronMg = 0.0, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.0, IronType = "no-hemo" },
                 IsInhibitor = true, 
                 Category = "BEVERAGE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_041", 
+                FoodItemId = "FOOD_041", 
                 Name = "Jugo de naranja", 
-                NutrientContent = new NutrientContent { IronMg = 0.1, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.1, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "BEVERAGE" 
             },
-            new FoodItem 
+            new FoodItemDocument 
             { 
-                FoodId = "FOOD_042", 
+                FoodItemId = "FOOD_042", 
                 Name = "Agua", 
-                NutrientContent = new NutrientContent { IronMg = 0.0, IronType = "no-hemo" },
+                NutrientContent = new NutrientContentDocument { IronMg = 0.0, IronType = "no-hemo" },
                 IsInhibitor = false, 
                 Category = "BEVERAGE" 
             }
