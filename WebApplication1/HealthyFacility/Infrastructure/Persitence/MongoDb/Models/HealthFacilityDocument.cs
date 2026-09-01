@@ -4,6 +4,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace WebApplication1.HealthyFacility.Infrastructure.Persitence.MongoDb.Models;
 
+
 public class CoordinatesDocument
 {
     public double Lat { get; set; }

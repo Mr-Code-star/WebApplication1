@@ -20,40 +20,65 @@ public class MongoHealthFacilityRepository : IHealthFacilityRepository
 
     public async Task<HealthFacility> SaveAsync(HealthFacility facility)
     {
-        var data = HealthFacilityMapper.ToPersistence(facility);
-
-        var document = new HealthFacilityDocument
+        try
         {
-            HealthFacilityId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-            Name = (string)data.GetType().GetProperty("name")?.GetValue(data, null)!,
-            Address = (string)data.GetType().GetProperty("address")?.GetValue(data, null)!,
-            DistrictId = (string)data.GetType().GetProperty("districtId")?.GetValue(data, null)!,
-            DistrictName = (string)data.GetType().GetProperty("districtName")?.GetValue(data, null)!,
-            Coordinates = new CoordinatesDocument
-            {
-                Lat = (double)data.GetType().GetProperty("coordinates")?.GetType().GetProperty("lat")?.GetValue(data.GetType().GetProperty("coordinates")?.GetValue(data, null), null)!,
-                Lng = (double)data.GetType().GetProperty("coordinates")?.GetType().GetProperty("lng")?.GetValue(data.GetType().GetProperty("coordinates")?.GetValue(data, null), null)!
-            },
-            PhoneNumber = (string)data.GetType().GetProperty("phoneNumber")?.GetValue(data, null)!,
-            Services = ((IEnumerable<dynamic>)data.GetType().GetProperty("services")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
-                .Select(s => (string)s).ToList(),
-            OperatingSchedule = new OperatingScheduleDocument
-            {
-                AvailableDays = ((IEnumerable<dynamic>)data.GetType().GetProperty("operatingSchedule")?.GetType().GetProperty("availableDays")?.GetValue(data.GetType().GetProperty("operatingSchedule")?.GetValue(data, null), null) ?? Enumerable.Empty<dynamic>())
-                    .Select(d => (string)d).ToList(),
-                AvailableSlots = ((IEnumerable<dynamic>)data.GetType().GetProperty("operatingSchedule")?.GetType().GetProperty("availableSlots")?.GetValue(data.GetType().GetProperty("operatingSchedule")?.GetValue(data, null), null) ?? Enumerable.Empty<dynamic>())
-                    .Select(s => (string)s).ToList()
-            },
-            ScheduleOfOperation = (string)data.GetType().GetProperty("scheduleOfOperation")?.GetValue(data, null)!,
-            Status = (string)data.GetType().GetProperty("status")?.GetValue(data, null)!,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+            _logger.LogInformation("📝 Guardando posta: {FacilityName}", facility.Name);
 
-        await _collection.InsertOneAsync(document);
-        _logger.LogInformation("Posta de salud creada: {HealthFacilityId}", document.HealthFacilityId);
+            // ✅ Usar el DTO de persistencia
+            var data = HealthFacilityMapper.ToPersistence(facility);
 
-        return facility;
+            _logger.LogInformation("📄 Datos mapeados: {@Data}", new
+            {
+                data.Id,
+                data.Name,
+                data.Address,
+                data.DistrictId,
+                data.DistrictName,
+                data.Latitude,
+                data.Longitude,
+                data.PhoneNumber,
+                ServicesCount = data.Services.Count,
+                AvailableDaysCount = data.AvailableDays.Count,
+                AvailableSlotsCount = data.AvailableSlots.Count,
+                data.ScheduleOfOperation,
+                data.Status
+            });
+
+            var document = new HealthFacilityDocument
+            {
+                HealthFacilityId = data.Id,
+                Name = data.Name,
+                Address = data.Address,
+                DistrictId = data.DistrictId,
+                DistrictName = data.DistrictName,
+                Coordinates = new CoordinatesDocument
+                {
+                    Lat = data.Latitude,
+                    Lng = data.Longitude
+                },
+                PhoneNumber = data.PhoneNumber,
+                Services = data.Services ?? new List<string>(),
+                OperatingSchedule = new OperatingScheduleDocument
+                {
+                    AvailableDays = data.AvailableDays ?? new List<string>(),
+                    AvailableSlots = data.AvailableSlots ?? new List<string>()
+                },
+                ScheduleOfOperation = data.ScheduleOfOperation,
+                Status = data.Status,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _collection.InsertOneAsync(document);
+            _logger.LogInformation("✅ Posta de salud creada: {HealthFacilityId}", document.HealthFacilityId);
+
+            return facility;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error al guardar posta: {FacilityName}", facility.Name);
+            throw;
+        }
     }
 
     public async Task<HealthFacility?> FindByIdAsync(string id)
@@ -63,13 +88,61 @@ public class MongoHealthFacilityRepository : IHealthFacilityRepository
 
         if (document == null) return null;
 
-        return HealthFacilityMapper.ToDomain(document);
+        // ✅ Convertir documento a objeto dinámico para el mapper
+        var dynamicDoc = new
+        {
+            id = document.HealthFacilityId,
+            name = document.Name,
+            address = document.Address,
+            districtId = document.DistrictId,
+            districtName = document.DistrictName,
+            coordinates = new { lat = document.Coordinates.Lat, lng = document.Coordinates.Lng },
+            phoneNumber = document.PhoneNumber,
+            services = document.Services,
+            operatingSchedule = new
+            {
+                availableDays = document.OperatingSchedule.AvailableDays,
+                availableSlots = document.OperatingSchedule.AvailableSlots
+            },
+            scheduleOfOperation = document.ScheduleOfOperation,
+            status = document.Status,
+            nurseAssignments = new List<object>() // Asignaciones vacías por ahora
+        };
+
+        return HealthFacilityMapper.ToDomain(dynamicDoc);
     }
 
     public async Task<List<HealthFacility>> FindAllAsync()
     {
         var documents = await _collection.Find(_ => true).ToListAsync();
-        return documents.Select(HealthFacilityMapper.ToDomain).ToList();
+        var result = new List<HealthFacility>();
+
+        foreach (var doc in documents)
+        {
+            var dynamicDoc = new
+            {
+                id = doc.HealthFacilityId,
+                name = doc.Name,
+                address = doc.Address,
+                districtId = doc.DistrictId,
+                districtName = doc.DistrictName,
+                coordinates = new { lat = doc.Coordinates.Lat, lng = doc.Coordinates.Lng },
+                phoneNumber = doc.PhoneNumber,
+                services = doc.Services,
+                operatingSchedule = new
+                {
+                    availableDays = doc.OperatingSchedule.AvailableDays,
+                    availableSlots = doc.OperatingSchedule.AvailableSlots
+                },
+                scheduleOfOperation = doc.ScheduleOfOperation,
+                status = doc.Status,
+                nurseAssignments = new List<object>()
+            };
+
+            result.Add(HealthFacilityMapper.ToDomain(dynamicDoc));
+        }
+
+        return result;
     }
 
     public async Task<List<HealthFacility>> FindActiveFacilitiesAsync()
@@ -77,26 +150,60 @@ public class MongoHealthFacilityRepository : IHealthFacilityRepository
         var filter = Builders<HealthFacilityDocument>.Filter.Eq(x => x.Status, FacilityStatus.ACTIVE.ToStringValue());
         var documents = await _collection.Find(filter).ToListAsync();
 
-        return documents.Select(HealthFacilityMapper.ToDomain).ToList();
+        var result = new List<HealthFacility>();
+
+        foreach (var doc in documents)
+        {
+            var dynamicDoc = new
+            {
+                id = doc.HealthFacilityId,
+                name = doc.Name,
+                address = doc.Address,
+                districtId = doc.DistrictId,
+                districtName = doc.DistrictName,
+                coordinates = new { lat = doc.Coordinates.Lat, lng = doc.Coordinates.Lng },
+                phoneNumber = doc.PhoneNumber,
+                services = doc.Services,
+                operatingSchedule = new
+                {
+                    availableDays = doc.OperatingSchedule.AvailableDays,
+                    availableSlots = doc.OperatingSchedule.AvailableSlots
+                },
+                scheduleOfOperation = doc.ScheduleOfOperation,
+                status = doc.Status,
+                nurseAssignments = new List<object>()
+            };
+
+            result.Add(HealthFacilityMapper.ToDomain(dynamicDoc));
+        }
+
+        return result;
     }
 
     public async Task UpdateAsync(HealthFacility facility)
     {
         var data = HealthFacilityMapper.ToPersistence(facility);
-        var facilityId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!;
-
-        var filter = Builders<HealthFacilityDocument>.Filter.Eq(x => x.HealthFacilityId, facilityId);
+        var filter = Builders<HealthFacilityDocument>.Filter.Eq(x => x.HealthFacilityId, data.Id);
 
         var update = Builders<HealthFacilityDocument>.Update
-            .Set(x => x.Name, (string)data.GetType().GetProperty("name")?.GetValue(data, null)!)
-            .Set(x => x.Address, (string)data.GetType().GetProperty("address")?.GetValue(data, null)!)
-            .Set(x => x.PhoneNumber, (string)data.GetType().GetProperty("phoneNumber")?.GetValue(data, null)!)
-            .Set(x => x.Services, ((IEnumerable<dynamic>)data.GetType().GetProperty("services")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
-                .Select(s => (string)s).ToList())
-            .Set(x => x.Status, (string)data.GetType().GetProperty("status")?.GetValue(data, null)!)
+            .Set(x => x.Name, data.Name)
+            .Set(x => x.Address, data.Address)
+            .Set(x => x.DistrictId, data.DistrictId)
+            .Set(x => x.DistrictName, data.DistrictName)
+            .Set(x => x.Coordinates, new CoordinatesDocument { Lat = data.Latitude, Lng = data.Longitude })
+            .Set(x => x.PhoneNumber, data.PhoneNumber)
+            .Set(x => x.Services, data.Services ?? new List<string>())
+            .Set(x => x.OperatingSchedule, new OperatingScheduleDocument
+            {
+                AvailableDays = data.AvailableDays ?? new List<string>(),
+                AvailableSlots = data.AvailableSlots ?? new List<string>()
+            })
+            .Set(x => x.ScheduleOfOperation, data.ScheduleOfOperation)
+            .Set(x => x.Status, data.Status)
             .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await _collection.UpdateOneAsync(filter, update);
-        _logger.LogInformation("Posta de salud actualizada: {HealthFacilityId}", facilityId);
+        _logger.LogInformation("Posta de salud actualizada: {HealthFacilityId}", data.Id);
     }
 }
+

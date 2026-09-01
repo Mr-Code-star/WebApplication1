@@ -33,13 +33,43 @@ public class HealthFacilityController : ControllerBase
     // ==========================================
     // 1. REGISTRAR POSTA - SOLO ADMIN
     // ==========================================
-
     [HttpPost]
     [RequireRole("Admin")]
     public async Task<IActionResult> RegisterHealthFacility([FromBody] RegisterHealthFacilityRequest request)
     {
         try
         {
+            // ✅ Log de los datos recibidos
+            Console.WriteLine($"📥 Registrando posta:");
+            Console.WriteLine($"  Name: {request.Name}");
+            Console.WriteLine($"  Address: {request.Address}");
+            Console.WriteLine($"  DistrictId: {request.DistrictId}");
+            Console.WriteLine($"  Latitude: {request.Latitude}");
+            Console.WriteLine($"  Longitude: {request.Longitude}");
+            Console.WriteLine($"  PhoneNumber: {request.PhoneNumber}");
+            Console.WriteLine($"  Services: {request.Services?.Count ?? 0}");
+            Console.WriteLine($"  AvailableDays: {request.AvailableDays?.Count ?? 0}");
+            Console.WriteLine($"  AvailableSlots: {request.AvailableSlots?.Count ?? 0}");
+
+            // Validar que los datos no sean null
+            if (string.IsNullOrEmpty(request.Name))
+                return BadRequest(new { error = "Name is required" });
+
+            if (string.IsNullOrEmpty(request.Address))
+                return BadRequest(new { error = "Address is required" });
+
+            if (string.IsNullOrEmpty(request.DistrictId))
+                return BadRequest(new { error = "DistrictId is required" });
+
+            if (request.Services == null || request.Services.Count == 0)
+                return BadRequest(new { error = "At least one service is required" });
+
+            if (request.AvailableDays == null || request.AvailableDays.Count == 0)
+                return BadRequest(new { error = "At least one available day is required" });
+
+            if (request.AvailableSlots == null || request.AvailableSlots.Count == 0)
+                return BadRequest(new { error = "At least one available slot is required" });
+
             var command = new RegisterHealthFacilityCommand(
                 request.Name,
                 request.Address,
@@ -54,14 +84,15 @@ public class HealthFacilityController : ControllerBase
 
             await _facade.RegisterHealthFacilityAsync(command);
 
-            return StatusCode(201, new { message = "Health facility registered successfully" });
-        }
-        catch (Exception ex)
+            return StatusCode(201, new { message = "Health facility registered successfully" }); 
+        } catch (Exception ex)
         {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
             return BadRequest(new { error = ex.Message });
         }
     }
-
+    
     // ==========================================
     // 2. ASIGNAR ENFERMERO A POSTA - SOLO ADMIN
     // ==========================================
