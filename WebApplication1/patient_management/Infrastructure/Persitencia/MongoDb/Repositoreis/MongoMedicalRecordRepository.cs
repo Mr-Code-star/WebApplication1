@@ -23,6 +23,7 @@ public class MongoMedicalRecordRepository : IMedicalRecordRepository
     public async Task<MedicalRecord> SaveAsync(MedicalRecord medicalRecord)
     {
         var data = MedicalRecordMapper.ToPersistence(medicalRecord);
+    
         var document = new MedicalRecordDocument
         {
             MedicalRecordId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
@@ -53,7 +54,6 @@ public class MongoMedicalRecordRepository : IMedicalRecordRepository
         await _collection.InsertOneAsync(document);
         return medicalRecord;
     }
-
     public async Task<MedicalRecord?> FindByIdAsync(string medicalRecordId)
     {
         var filter = Builders<MedicalRecordDocument>.Filter.Eq(x => x.MedicalRecordId, medicalRecordId);
@@ -61,7 +61,7 @@ public class MongoMedicalRecordRepository : IMedicalRecordRepository
 
         if (document == null) return null;
 
-        return MedicalRecordMapper.ToDomain(document);
+        return MedicalRecordMapper.ToDomain(document); // ✅ Usa el mapper actualizado
     }
 
     public async Task<MedicalRecord?> FindByPatientIdAsync(string patientId)
@@ -71,7 +71,7 @@ public class MongoMedicalRecordRepository : IMedicalRecordRepository
 
         if (document == null) return null;
 
-        return MedicalRecordMapper.ToDomain(document);
+        return MedicalRecordMapper.ToDomain(document); // ✅ Usa el mapper actualizado
     }
 
     public async Task UpdateAsync(MedicalRecord medicalRecord)

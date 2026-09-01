@@ -1,38 +1,48 @@
 ﻿using WebApplication1.patient_management.Domain.Entities;
 using WebApplication1.patient_management.Domain.Enums;
 using WebApplication1.patient_management.Domain.ValueObjects;
+using WebApplication1.patient_management.Infrastructure.Persitencia.MongoDb.Models;
 
 namespace WebApplication1.patient_management.Infrastructure.Mapper;
 
 public static class MedicalRecordMapper
 {
-    public static MedicalRecord ToDomain(dynamic document)
+    public static MedicalRecord ToDomain(MedicalRecordDocument document)
     {
-        var controls = ((IEnumerable<dynamic>)document.controls ?? Enumerable.Empty<dynamic>())
-            .Select((dynamic control) =>
-            {
-                return new Control(
-                    control.id ?? control._id,
-                    control.date ?? control.createdAt,
-                    new HemoglobinLevel((double?)control.hemoglobinLevel)
-                );
-            }).ToList();
+        if (document == null)
+            throw new ArgumentNullException(nameof(document));
+
+        // Convertir controles
+        var controls = (document.Controls ?? new List<ControlDocument>())
+            .Select(c => new Control(
+                c.Id,
+                c.Date,
+                new HemoglobinLevel(c.HemoglobinLevel)
+            )).ToList();
+
+        // Convertir antecedentes
+        var antecedentes = (document.Antecedentes ?? new List<AntecedenteDocument>())
+            .Select(a => new Antecedente(a.Type, a.Description)).ToList();
+
+        // Convertir síntomas
+        var sintomas = document.Sintomas ?? new List<string>();
 
         return new MedicalRecord(
-            document.id,                                    // 1. id
-            document.createdAt,                             // 2. createdAt
-            new Weight((double)document.weight),            // 3. weight
-            new Height((double)document.height),            // 4. height
-            GenderExtensions.FromString(document.gender),   // 5. gender
-            new MotivoConsulta(document.motivoConsulta),    // 6. motivoConsulta
-            new Observaciones(document.observaciones),      // 7. observaciones
-            document.patientId,                             // 8. patientId
-            document.nurseId,                               // 9. nurseId (opcional)
-            document.hemoglobinLevel != null ? new HemoglobinLevel((double)document.hemoglobinLevel) : null, // 10. hemoglobinLevel (opcional)
-            ((IEnumerable<dynamic>)document.antecedentes ?? Enumerable.Empty<dynamic>())
-                .Select(a => new Antecedente(a.type, a.description)).ToList(), // 11. antecedentes (opcional)
-            ((IEnumerable<dynamic>)document.sintomas ?? Enumerable.Empty<dynamic>()).Select(s => (string)s).ToList(), // 12. sintomas (opcional)
-            controls                                        // 13. controls (opcional)
+            document.MedicalRecordId,                          // id
+            document.CreatedAt,                                // createdAt
+            new Weight(document.Weight),                       // weight
+            new Height(document.Height),                       // height
+            GenderExtensions.FromString(document.Gender),      // gender
+            new MotivoConsulta(document.MotivoConsulta),       // motivoConsulta
+            new Observaciones(document.Observaciones ?? string.Empty), // observaciones
+            document.PatientId,                                // patientId
+            document.NurseId,                                  // nurseId (opcional)
+            document.HemoglobinLevel.HasValue 
+                ? new HemoglobinLevel(document.HemoglobinLevel.Value) 
+                : null,                                        // hemoglobinLevel (opcional)
+            antecedentes,                                      // antecedentes
+            sintomas,                                          // sintomas
+            controls                                           // controls
         );
     }
 
