@@ -20,7 +20,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="patient_management\Domain\Model\" />
       <Folder Include="shared\catalogs\Enums\" />
     </ItemGroup>
 
