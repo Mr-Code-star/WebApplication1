@@ -1,14 +1,13 @@
-﻿namespace WebApplication1.patient_management.Infrastructure.Persitencia.MongoDb.Models;
-
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
+namespace WebApplication1.patient_management.Infrastructure.Persitencia.MongoDb.Models;
 
 public class PatientDocument
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? Id { get; set; }
+    public string? Id { get; set; }  // ← Este es el _id de MongoDB, NO se debe modificar
 
     public string PatientId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

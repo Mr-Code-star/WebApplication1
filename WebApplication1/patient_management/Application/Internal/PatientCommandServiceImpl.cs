@@ -50,6 +50,10 @@ public class PatientCommandServiceImpl : IPatientCommandService
 
     public async Task AssignPatientToNurseAsync(AssignPatientToNurseCommand command)
     {
+        // ✅ LOG para depuración
+        Console.WriteLine($"🔍 AssignPatientToNurseAsync - PatientId: {command.PatientId}");
+        Console.WriteLine($"🔍 AssignPatientToNurseAsync - NurseId: {command.NurseId}");
+
         var patient = await _patientRepository.FindByIdAsync(command.PatientId);
 
         if (patient == null)
@@ -57,7 +61,8 @@ public class PatientCommandServiceImpl : IPatientCommandService
             throw new Exception("Patient not found");
         }
 
-        var assignment = await _nurseAssignmentRepository.FindByNurseIdAsync(command.NurseId);
+        // ✅ CORREGIDO: Usar FindActiveByNurseIdAsync en lugar de FindByNurseIdAsync
+        var assignment = await _nurseAssignmentRepository.FindActiveByNurseIdAsync(command.NurseId);
 
         if (assignment == null)
         {
@@ -67,6 +72,9 @@ public class PatientCommandServiceImpl : IPatientCommandService
         var assignmentData = assignment.ToPrimitives();
         var patientData = patient.ToPrimitives();
         var currentNurseId = patientData.NurseId;
+
+        Console.WriteLine($"🔍 assignment - FacilityId: {assignmentData.FacilityId}");
+        Console.WriteLine($"🔍 patient - currentNurseId: {currentNurseId}");
 
         if (currentNurseId == command.NurseId)
         {

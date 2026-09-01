@@ -68,6 +68,9 @@ public class Patient : IPatientWithName
 
     public void AssignNurse(string nurseId, string facilityId)
     {
+        Console.WriteLine($"🔍 AssignNurse - nurseId: {nurseId}, facilityId: {facilityId}");
+        Console.WriteLine($"🔍 AssignNurse - Status actual: {Status}, NurseId actual: {NurseId ?? "NULL"}");
+
         // Si el paciente ya tiene enfermera y NO está dado de alta, lanzar error
         if (NurseId != null && Status != PatientStatus.Discharged)
         {
@@ -76,7 +79,9 @@ public class Patient : IPatientWithName
 
         NurseId = nurseId;
         FacilityId = facilityId;
-        Status = PatientStatus.Active; // Reactivar automáticamente al reasignar
+        Status = PatientStatus.Active;
+
+        Console.WriteLine($"🔍 AssignNurse - Nuevo Status: {Status}, Nuevo NurseId: {NurseId}");
     }
 
     public void Discharge(string nurseId)

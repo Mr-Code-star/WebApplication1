@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using WebApplication1.Contexts.PatientManagement.Domain.Commands;
 using WebApplication1.patient_management.Domain;
 using WebApplication1.patient_management.Domain.ValueObjects;
@@ -76,7 +77,28 @@ public class PatientManagementController : ControllerBase
     {
         try
         {
+            // ✅ LOG de todos los claims
+            var claims = User.Claims.Select(c => $"{c.Type}: {c.Value}");
+            Console.WriteLine($"🔍 Claims: {string.Join(", ", claims)}");
+
+            // ✅ Obtener nurseId del token
             var nurseId = User.FindFirst("nurseId")?.Value;
+            
+            // Si no existe, intentar con "id"
+            if (string.IsNullOrEmpty(nurseId))
+            {
+                nurseId = User.FindFirst("id")?.Value;
+                Console.WriteLine($"🔍 nurseId obtenido de 'id': {nurseId}");
+            }
+            // Si no existe, intentar con ClaimTypes.NameIdentifier
+            if (string.IsNullOrEmpty(nurseId))
+            {
+                nurseId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                Console.WriteLine($"🔍 nurseId obtenido de NameIdentifier: {nurseId}");
+            }
+
+            Console.WriteLine($"🔍 nurseId final: {nurseId ?? "NULL"}");
+            Console.WriteLine($"🔍 patientId: {request.PatientId}");
 
             if (string.IsNullOrEmpty(nurseId))
             {
@@ -88,6 +110,14 @@ public class PatientManagementController : ControllerBase
                 return BadRequest(new { error = "Patient ID es requerido" });
             }
 
+            // ✅ Verificar que la enfermera existe
+            // (asumiendo que tienes acceso a IUserRepository)
+            // var nurse = await _userRepository.FindNurseByIdAsync(nurseId);
+            // if (nurse == null)
+            // {
+            //     return BadRequest(new { error = "Nurse no encontrada" });
+            // }
+
             var command = new AssignPatientToNurseCommand(request.PatientId, nurseId);
 
             await _patientFacade.AssignPatientToNurseAsync(command);
@@ -96,10 +126,12 @@ public class PatientManagementController : ControllerBase
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"❌ Error en AssignPatientToNurse: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
             return BadRequest(new { error = ex.Message });
         }
     }
-
+    
     // ==========================================
     // 3. CREAR HISTORIA CLÍNICA
     // ==========================================

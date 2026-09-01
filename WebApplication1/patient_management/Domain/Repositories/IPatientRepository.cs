@@ -37,4 +37,5 @@ public interface IPatientRepository
     // ==========================================
     Task<Patient> UpdateAsync(Patient patient);
 
+    Task<IReadOnlyList<Patient>> FindPatientsAssignedToNurseAsync(string nurseId, string? searchTerm = null);
 }

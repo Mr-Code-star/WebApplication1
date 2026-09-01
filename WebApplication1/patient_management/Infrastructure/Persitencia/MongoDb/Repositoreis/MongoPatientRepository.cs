@@ -122,31 +122,46 @@ public class MongoPatientRepository : IPatientRepository
         return (int)await _collection.CountDocumentsAsync(filter);
     }
 
-     public async Task<Patient> UpdateAsync(Patient patient)
+    public async Task<Patient> UpdateAsync(Patient patient)
     {
         try
         {
-            var data = PatientMapper.ToPersistence(patient);
-            var patientId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!;
+            var data = patient.ToPrimitives();
+            var patientId = data.Id;
 
+            // ✅ LOG para depuración
+            _logger.LogInformation("🔍 UpdateAsync - patientId: {PatientId}", patientId);
+            _logger.LogInformation("🔍 UpdateAsync - NurseId: {NurseId}", data.NurseId ?? "NULL");
+            _logger.LogInformation("🔍 UpdateAsync - FacilityId: {FacilityId}", data.FacilityId ?? "NULL");
+            _logger.LogInformation("🔍 UpdateAsync - Status: {Status}", data.Status);
+
+            // ✅ Obtener el documento existente para preservar el _id
             var filter = Builders<PatientDocument>.Filter.Eq(x => x.PatientId, patientId);
+            var existingDocument = await _collection.Find(filter).FirstOrDefaultAsync();
 
+            if (existingDocument == null)
+            {
+                _logger.LogWarning("No se encontró paciente para actualizar: {PatientId}", patientId);
+                throw new Exception($"Patient with id {patientId} not found");
+            }
+
+            // ✅ CORREGIDO: Usar UpdateOneAsync con Set en lugar de ReplaceOneAsync
             var update = Builders<PatientDocument>.Update
-                .Set(x => x.Name, (string)data.GetType().GetProperty("name")?.GetValue(data, null)!)
-                .Set(x => x.LastName, (string)data.GetType().GetProperty("lastName")?.GetValue(data, null)!)
-                .Set(x => x.BirthDate, (DateTime)data.GetType().GetProperty("birthDate")?.GetValue(data, null)!)
-                .Set(x => x.CurrentWeight, (double)data.GetType().GetProperty("currentWeight")?.GetValue(data, null)!)
-                .Set(x => x.CurrentHeight, (double)data.GetType().GetProperty("currentHeight")?.GetValue(data, null)!)
-                .Set(x => x.MotherId, (string)data.GetType().GetProperty("motherId")?.GetValue(data, null)!)
-                .Set(x => x.NurseId, (string?)data.GetType().GetProperty("nurseId")?.GetValue(data, null))
-                .Set(x => x.Gender, (string)data.GetType().GetProperty("gender")?.GetValue(data, null)!)
-                .Set(x => x.FacilityId, (string?)data.GetType().GetProperty("facilityId")?.GetValue(data, null))
-                .Set(x => x.Status, (string)data.GetType().GetProperty("status")?.GetValue(data, null)!)
+                .Set(x => x.Name, data.Name)
+                .Set(x => x.LastName, data.LastName)
+                .Set(x => x.BirthDate, data.BirthDate)
+                .Set(x => x.CurrentWeight, data.CurrentWeight)
+                .Set(x => x.CurrentHeight, data.CurrentHeight)
+                .Set(x => x.MotherId, data.MotherId)
+                .Set(x => x.NurseId, data.NurseId)
+                .Set(x => x.Gender, data.Gender)
+                .Set(x => x.FacilityId, data.FacilityId)
+                .Set(x => x.Status, data.Status)
                 .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
             var result = await _collection.UpdateOneAsync(filter, update);
 
-            if (result.ModifiedCount == 0)
+            if (result.ModifiedCount == 0 && result.MatchedCount == 0)
             {
                 _logger.LogWarning("No se encontró paciente para actualizar: {PatientId}", patientId);
                 throw new Exception($"Patient with id {patientId} not found");
@@ -161,7 +176,8 @@ public class MongoPatientRepository : IPatientRepository
             throw;
         }
     }
-     
+    
+    
     public async Task<MedicalRecord?> FindMedicalRecordByPatientIdAsync(string patientId)
     {
         // Esto debería usar el repositorio de MedicalRecord
