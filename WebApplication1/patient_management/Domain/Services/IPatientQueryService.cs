@@ -28,7 +28,7 @@ public interface IPatientQueryService
     // HISTORIA CLÍNICA
     // ==========================================
 
-    Task<MedicalRecord?> GetMedicalRecordAsync(GetMedicalRecordQuery query);
+    Task<MedicalRecordWithPatientDto?> GetMedicalRecordAsync(GetMedicalRecordQuery query);
     Task<bool> CheckPatientMedicalRecordAsync(CheckPatientMedicalRecordQuery query);
 
     // ==========================================

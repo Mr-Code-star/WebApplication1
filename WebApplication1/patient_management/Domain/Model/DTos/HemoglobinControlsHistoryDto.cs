@@ -16,7 +16,7 @@ public class HemoglobinControlsHistoryDto
 public class ControlItemDto
 {
     public string Id { get; set; } = string.Empty;
-    public string Date { get; set; } = string.Empty;
+    public DateTime Date { get; set; }
     public double? HemoglobinLevel { get; set; }
     public string AnemiaStatus { get; set; } = string.Empty;
 }

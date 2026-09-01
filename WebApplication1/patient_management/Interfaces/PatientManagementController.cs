@@ -330,8 +330,8 @@ public class PatientManagementController : ControllerBase
     }
 
     // ==========================================
-    // 8. OBTENER HISTORIA CLÍNICA
-    // ==========================================
+// 8. OBTENER HISTORIA CLÍNICA - ACTUALIZAR
+// ==========================================
 
     [HttpGet("{patientId}/medical-record")]
     [Authorize]
@@ -357,6 +357,11 @@ public class PatientManagementController : ControllerBase
             var query = new GetMedicalRecordQuery(patientId);
             var data = await _patientFacade.GetMedicalRecordAsync(query);
 
+            if (data == null)
+            {
+                return NotFound(new { error = "Medical record not found" });
+            }
+
             return Ok(data);
         }
         catch (Exception ex)
@@ -364,7 +369,7 @@ public class PatientManagementController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
-
+    
     // ==========================================
     // 9. OBTENER HISTORIAL DE HEMOGLOBINA
     // ==========================================

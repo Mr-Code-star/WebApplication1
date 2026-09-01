@@ -2,6 +2,7 @@
 using WebApplication1.patient_management.Domain.Aggregate;
 using WebApplication1.patient_management.Domain.Entities;
 using WebApplication1.patient_management.Domain.Enums;
+using WebApplication1.patient_management.Domain.Model.DTos;
 using WebApplication1.patient_management.Domain.Queries;
 using WebApplication1.patient_management.Domain.Repositories;
 using WebApplication1.patient_management.Domain.Services;
@@ -119,9 +120,7 @@ public class PatientQueryServiceImpl : IPatientQueryService
     }
 
     // PatientQueryServiceImpl.cs
-
-    // PatientQueryServiceImpl.cs
-
+    
 public async Task<object> GetHemoglobinControlsHistoryAsync(GetHemoglobinControlsHistoryQuery query)
 {
     var medicalRecord = await _medicalRecordRepository.FindByIdAsync(query.MedicalRecordId);
@@ -179,10 +178,50 @@ public async Task<object> GetHemoglobinControlsHistoryAsync(GetHemoglobinControl
     };
 }
 
-    public async Task<MedicalRecord?> GetMedicalRecordAsync(GetMedicalRecordQuery query)
+public async Task<MedicalRecordWithPatientDto?> GetMedicalRecordAsync(GetMedicalRecordQuery query)
+{
+    var medicalRecord = await _medicalRecordRepository.FindByPatientIdAsync(query.PatientId);
+
+    if (medicalRecord == null)
     {
-        return await _medicalRecordRepository.FindByPatientIdAsync(query.PatientId);
+        return null;
     }
+
+    // ✅ Obtener el paciente para el nombre
+    var patient = await _patientRepository.FindByIdAsync(query.PatientId);
+    var patientName = patient != null ? $"{patient.Name} {patient.LastName}" : "Paciente";
+
+    var data = medicalRecord.ToPrimitives();
+
+    return new MedicalRecordWithPatientDto
+    {
+        Id = data.Id,
+        PatientId = data.PatientId,
+        PatientName = patientName,  // ✅ Agregar el nombre
+        CreatedAt = data.CreatedAt,
+        UpdatedAt = data.UpdatedAt,
+        HemoglobinLevel = data.HemoglobinLevel,
+        Weight = data.Weight,
+        Height = data.Height,
+        Gender = data.Gender,
+        MotivoConsulta = data.MotivoConsulta,
+        Observaciones = data.Observaciones,
+        Sintomas = data.Sintomas,
+        NurseId = data.NurseId,
+        Antecedentes = data.Antecedentes.Select(a => new AntecedenteDto
+        {
+            Type = a.Type,
+            Description = a.Description
+        }).ToList(),
+        Controls = data.Controls.Select(c => new ControlItemDto
+        {
+            Id = c.Id,
+            Date = c.Date,
+            HemoglobinLevel = c.HemoglobinLevel,
+            AnemiaStatus = c.AnemiaStatus
+        }).ToList()
+    };
+}
 
     public async Task<IReadOnlyList<Patient>> GetPatientsEligibleForDischargeAsync(GetPatientsEligibleForDischargeQuery query)
     {

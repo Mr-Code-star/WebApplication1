@@ -3,6 +3,7 @@ using WebApplication1.patient_management.Domain;
 using WebApplication1.patient_management.Domain.Aggregate;
 using WebApplication1.patient_management.Domain.Commands;
 using WebApplication1.patient_management.Domain.Entities;
+using WebApplication1.patient_management.Domain.Model.DTos;
 using WebApplication1.patient_management.Domain.Queries;
 using WebApplication1.patient_management.Domain.Services;
 
@@ -71,11 +72,10 @@ public class PatientManagementFacade
         return await _queryService.ListPatientsByMotherAsync(query);
     }
 
-    public async Task<MedicalRecord?> GetMedicalRecordAsync(GetMedicalRecordQuery query)
+    public async Task<MedicalRecordWithPatientDto?> GetMedicalRecordAsync(GetMedicalRecordQuery query)
     {
         return await _queryService.GetMedicalRecordAsync(query);
     }
-
     public async Task<object> GetHemoglobinControlsHistoryAsync(GetHemoglobinControlsHistoryQuery query)
     {
         return await _queryService.GetHemoglobinControlsHistoryAsync(query);
