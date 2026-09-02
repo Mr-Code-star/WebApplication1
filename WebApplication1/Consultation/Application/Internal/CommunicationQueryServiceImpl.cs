@@ -104,33 +104,17 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
 
         var sortedMessages = data.Messages.OrderBy(m => m.SentAt).ToList();
 
-        // Obtener datos del paciente y enfermera para enriquecer la respuesta
-        var patient = await _patientRepository.FindByIdAsync(data.PatientId);
-        var patientData = patient?.ToPrimitives();
-
-        var nurse = await _userRepository.FindNurseByIdAsync(data.NurseId);
-        var nurseData = nurse?.ToPrimitives();
-
-        // ✅ Formatear respuesta como espera el frontend Kotlin
+        // ✅ Formatear respuesta como espera el frontend ChatResponse
         return new
         {
-            id = data.Id,
-            patientId = data.PatientId,
-            patientName = patientData != null ? $"{patientData.Name} {patientData.LastName}".Trim() : "Unknown",
-            nurse = new
-            {
-                id = data.NurseId,
-                name = nurseData?.Name ?? "Unknown",
-                specialty = "Enfermera asignada"
-            },
-            isOpen = consultation.IsOpen(),
+            consultationId = data.Id,  // ← consultationId (NO id)
             messages = sortedMessages.Select(msg => new
             {
                 id = msg.Id,
-                text = msg.Content,
-                // ✅ CORREGIDO: comparar string con string (NURSE en mayúsculas)
-                isFromNurse = msg.SenderRole == "NURSE",
-                time = msg.SentAt.ToString("HH:mm")
+                senderId = msg.SenderId,
+                senderRole = msg.SenderRole == "NURSE" ? "NURSE" : "MOTHER",
+                content = msg.Content,
+                sentAt = msg.SentAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
             }).ToList()
         };
     }

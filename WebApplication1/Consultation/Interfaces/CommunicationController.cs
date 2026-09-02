@@ -1,4 +1,4 @@
-﻿using WebApplication1.Consultation.Interfaces.Assemblers;
+﻿﻿using WebApplication1.Consultation.Interfaces.Assemblers;
 using WebApplication1.Consultation.Interfaces.Facades;
 using WebApplication1.Consultation.Interfaces.Resources;
 using WebApplication1.shared.Attributes;
@@ -7,6 +7,7 @@ namespace WebApplication1.Consultation.Interfaces;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 
 [ApiController]
@@ -15,10 +16,12 @@ using Microsoft.AspNetCore.Mvc;
 public class CommunicationController : ControllerBase
 {
     private readonly CommunicationFacade _facade;
+    private readonly ILogger<CommunicationController> _logger;
 
-    public CommunicationController(CommunicationFacade facade)
+    public CommunicationController(CommunicationFacade facade, ILogger<CommunicationController> logger)
     {
         _facade = facade;
+        _logger = logger;
     }
 
     // ==========================================
@@ -26,7 +29,7 @@ public class CommunicationController : ControllerBase
     // ==========================================
 
     [HttpPost("consultations")]
-    [RequireRole("Mother")] // Solo MOTHER
+    [RequireRole("Mother")]
     public async Task<IActionResult> StartConsultation([FromBody] StartConsultationRequest request)
     {
         try
@@ -57,6 +60,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en StartConsultation");
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -64,19 +68,55 @@ public class CommunicationController : ControllerBase
     // ==========================================
     // 2. ENVIAR MENSAJE - MADRE O ENFERMERA
     // ==========================================
-
     [HttpPost("messages")]
-    [RequireRole("Mother", "Nurse")] // MOTHER o NURSE
+    [RequireRole("Mother", "Nurse")]
     public async Task<IActionResult> AddMessage([FromBody] AddMessageRequest request)
     {
         try
         {
-            var senderId = User.FindFirst("id")?.Value;
-            var senderRole = User.FindFirst("role")?.Value;
+            // ✅ LOG DE TODOS LOS CLAIMS DEL TOKEN
+            _logger.LogInformation("=== CLAIMS DEL TOKEN ===");
+            foreach (var claim in User.Claims)
+            {
+                _logger.LogInformation("{Type} = {Value}", claim.Type, claim.Value);
+            }
+
+            // ✅ BUSCAR senderId EN MÚLTIPLES CLAIMS
+            var senderId = User.FindFirst("id")?.Value 
+                ?? User.FindFirst("userId")?.Value 
+                ?? User.FindFirst("sub")?.Value
+                ?? User.FindFirst("nameid")?.Value
+                ?? User.FindFirst("name")?.Value
+                ?? User.FindFirst("email")?.Value;
+
+            // ✅ BUSCAR senderRole EN MÚLTIPLES CLAIMS
+            var senderRole = User.FindFirst("role")?.Value 
+                ?? User.FindFirst("userRole")?.Value
+                ?? User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+
+            // ✅ SI EL ROLE NO SE ENCUENTRA, INFERIR POR nurseId O motherId
+            if (string.IsNullOrEmpty(senderRole))
+            {
+                // ✅ CORREGIDO: Usar FindFirst en lugar de HasClaim
+                var nurseIdClaim = User.FindFirst("nurseId");
+                var motherIdClaim = User.FindFirst("motherId");
+                
+                if (nurseIdClaim != null)
+                    senderRole = "NURSE";
+                else if (motherIdClaim != null)
+                    senderRole = "MOTHER";
+            }
+
+            _logger.LogInformation("senderId={SenderId}, senderRole={SenderRole}", senderId, senderRole);
 
             if (string.IsNullOrEmpty(senderId) || string.IsNullOrEmpty(senderRole))
             {
-                return BadRequest(new { error = "Usuario no autenticado correctamente" });
+                return BadRequest(new { 
+                    error = "No se pudo obtener senderId o senderRole del token",
+                    claims = User.Claims.Select(c => $"{c.Type}={c.Value}"),
+                    senderId = senderId,
+                    senderRole = senderRole
+                });
             }
 
             if (string.IsNullOrEmpty(request.ConsultationId) || string.IsNullOrEmpty(request.Content))
@@ -99,6 +139,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en AddMessage");
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -108,7 +149,7 @@ public class CommunicationController : ControllerBase
     // ==========================================
 
     [HttpDelete("consultations/close")]
-    [RequireRole("Nurse")] // Solo NURSE
+    [RequireRole("Nurse")]
     public async Task<IActionResult> CloseConsultation([FromBody] CloseConsultationRequest request)
     {
         try
@@ -138,6 +179,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en CloseConsultation");
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -146,7 +188,7 @@ public class CommunicationController : ControllerBase
     // 4. OBTENER PACIENTES CON ENFERMERA ASIGNADA - SOLO MADRE
     // ==========================================
     [HttpGet("patients")]
-    [RequireRole("Mother")] // Solo MOTHER
+    [RequireRole("Mother")]
     public async Task<IActionResult> GetPatientsWithNurseAssignment()
     {
         try
@@ -165,6 +207,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en GetPatientsWithNurseAssignment");
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -173,7 +216,7 @@ public class CommunicationController : ControllerBase
     // 5. OBTENER INFORMACIÓN DE ENFERMERA - SOLO MADRE
     // ==========================================
     [HttpGet("nurse-info/{patientId}")]
-    [RequireRole("Mother")] // Solo MOTHER
+    [RequireRole("Mother")]
     public async Task<IActionResult> GetNurseInfoForConsultation(string patientId)
     {
         try
@@ -197,6 +240,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en GetNurseInfoForConsultation");
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -206,12 +250,14 @@ public class CommunicationController : ControllerBase
     // ==========================================
     
     [HttpGet("chat/{consultationId}")]
-    [RequireRole("Mother", "Nurse")] // MOTHER o NURSE
+    [RequireRole("Mother", "Nurse")]
     public async Task<IActionResult> GetConsultationChat(string consultationId)
     {
         try
         {
-            var requesterId = User.FindFirst("id")?.Value;
+            var requesterId = User.FindFirst("id")?.Value 
+                ?? User.FindFirst("userId")?.Value
+                ?? User.FindFirst("sub")?.Value;
 
             if (string.IsNullOrEmpty(requesterId))
             {
@@ -230,6 +276,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en GetConsultationChat");
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -238,7 +285,7 @@ public class CommunicationController : ControllerBase
     // 7. OBTENER CONSULTAS DE MADRE - SOLO MADRE
     // ==========================================
     [HttpGet("consultations/mother")]
-    [RequireRole("Mother")] // Solo MOTHER
+    [RequireRole("Mother")]
     public async Task<IActionResult> GetOpenConsultationsByMother()
     {
         try
@@ -257,6 +304,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en GetOpenConsultationsByMother");
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -265,7 +313,7 @@ public class CommunicationController : ControllerBase
     // 8. OBTENER CONSULTAS DE ENFERMERA - SOLO ENFERMERA
     // ==========================================
     [HttpGet("consultations/nurse")]
-    [RequireRole("Nurse")] // Solo NURSE
+    [RequireRole("Nurse")]
     public async Task<IActionResult> GetOpenConsultationsByNurse([FromQuery] string? searchTerm = null)
     {
         try
@@ -284,6 +332,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en GetOpenConsultationsByNurse");
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -292,7 +341,7 @@ public class CommunicationController : ControllerBase
     // 9. OBTENER MENSAJES DESPUÉS DE TIMESTAMP - MADRE O ENFERMERA
     // ==========================================
     [HttpGet("chat/{consultationId}/messages/after")]
-    [RequireRole("Mother", "Nurse")] // MOTHER o NURSE
+    [RequireRole("Mother", "Nurse")]
     public async Task<IActionResult> GetMessagesAfter(
         string consultationId,
         [FromQuery] long afterTimestamp,
@@ -300,7 +349,9 @@ public class CommunicationController : ControllerBase
     {
         try
         {
-            var requesterId = User.FindFirst("id")?.Value;
+            var requesterId = User.FindFirst("id")?.Value 
+                ?? User.FindFirst("userId")?.Value
+                ?? User.FindFirst("sub")?.Value;
 
             if (string.IsNullOrEmpty(requesterId))
             {
@@ -324,6 +375,7 @@ public class CommunicationController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error en GetMessagesAfter");
             return BadRequest(new { error = ex.Message });
         }
     }

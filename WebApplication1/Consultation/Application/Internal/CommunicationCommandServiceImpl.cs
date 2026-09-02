@@ -151,9 +151,8 @@ public class CommunicationCommandServiceImpl : ICommunicationCommandService
             throw new Exception("Consultation must contain at least one nurse response before closing");
         }
 
-        // ✅ Marcar como cerrada en lugar de eliminar
-        consultation.Close();
-        await _consultationRepository.UpdateAsync(consultation);
+        // ✅ ELIMINAR FÍSICAMENTE la consulta de MongoDB
+        await _consultationRepository.DeleteAsync(command.ConsultationId);
 
         return new
         {
