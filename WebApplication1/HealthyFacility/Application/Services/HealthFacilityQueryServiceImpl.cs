@@ -266,7 +266,36 @@ public class HealthFacilityQueryServiceImpl : IHealthyFacilityQueryService
 
     public async Task<List<Appointment>> GetNurseAppointmentScheduleAsync(GetNurseAppointmentScheduleQuery query)
     {
-        return await _appointmentRepository.FindConfirmedByNurseIdAsync(query.NurseId);
+        var allAppointments = await _appointmentRepository.FindConfirmedByNurseIdAsync(query.NurseId);
+    
+        var now = DateTime.UtcNow;
+        var today = now.ToString("yyyy-MM-dd");
+        var currentTime = now.ToString("HH:mm");
+    
+        // Filtrar solo citas CONFIRMADAS y FUTURAS
+        var futureAppointments = allAppointments
+            .Where(a => 
+            {
+                var data = a.ToPrimitives();
+                var dateComparison = string.Compare(data.AppointmentDate, today);
+            
+                if (dateComparison > 0) return true; // Fecha futura
+            
+                if (dateComparison == 0) // Misma fecha
+                {
+                    return string.Compare(data.AppointmentTime, currentTime) > 0; // Hora futura
+                }
+            
+                return false; // Fecha pasada
+            })
+            .OrderBy(a => 
+            {
+                var data = a.ToPrimitives();
+                return DateTime.Parse($"{data.AppointmentDate} {data.AppointmentTime}");
+            })
+            .ToList();
+    
+        return futureAppointments;
     }
 
     public async Task<List<object>> GetFacilityAvailableSlotsAsync(GetFacilityAvailableSlotsQuery query)

@@ -355,7 +355,6 @@ public class HealthFacilityController : ControllerBase
                     appointmentId = data.Id,
                     patientId = data.PatientId,
                     patientName = patientName, // ✅ AHORA INCLUYE PATIENTNAME
-                    facilityId = data.FacilityId,
                     appointmentDate = data.AppointmentDate,
                     appointmentTime = data.AppointmentTime,
                     status = data.Status
