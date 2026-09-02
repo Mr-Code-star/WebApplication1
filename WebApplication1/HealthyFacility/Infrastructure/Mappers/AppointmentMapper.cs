@@ -9,17 +9,16 @@ public static class AppointmentMapper
     public static Appointment ToDomain(dynamic document)
     {
         return new Appointment(
-            document.id,
-            document.facilityId,
-            document.patientId,
-            document.motherId,
-            document.appointmentDate,
-            document.appointmentTime,
-            document.nurseId,
-            AppointmentStatusExtensions.FromString(document.status)
+            document.AppointmentId,  // ✅ Cambiar de 'id' a 'AppointmentId'
+            document.FacilityId,
+            document.PatientId,
+            document.MotherId,
+            document.AppointmentDate,
+            document.AppointmentTime,
+            document.NurseId,
+            AppointmentStatusExtensions.FromString(document.Status)
         );
     }
-
     public static object ToPersistence(Appointment appointment)
     {
         var data = appointment.ToPrimitives();
