@@ -4,6 +4,7 @@ using WebApplication1.Contexts.PatientManagement.Domain.Commands;
 using WebApplication1.patient_management.Domain;
 using WebApplication1.patient_management.Domain.ValueObjects;
 using WebApplication1.patient_management.Interfaces.Assembler;
+using WebApplication1.patient_management.Interfaces.Resources;
 using WebApplication1.shared.Attributes;
 
 namespace WebApplication1.patient_management.Interfaces;
@@ -328,7 +329,6 @@ public async Task<IActionResult> RegisterHemoglobinControl([FromBody] RegisterHe
     // ==========================================
     // 7. LISTAR PACIENTES POR MADRE
     // ==========================================
-
     [HttpGet("mother/{motherId}")]
     [Authorize]
     [RequireRole("Nurse")] 
@@ -344,7 +344,28 @@ public async Task<IActionResult> RegisterHemoglobinControl([FromBody] RegisterHe
             var query = new ListPatientsByMotherQuery(motherId);
             var patients = await _patientFacade.ListPatientsByMotherAsync(query);
 
-            return Ok(patients);
+            // ✅ Convertir a PatientResource con StatusAssignment
+            var result = patients.Select(p =>
+            {
+                var data = p.ToPrimitives();
+            
+                // ✅ Determinar el estado de asignación basado en NurseId
+                var statusAssignment = string.IsNullOrEmpty(data.NurseId) 
+                    ? "UNASSIGNED" 
+                    : "ASSIGNED";
+            
+                return new PatientResource
+                {
+                    PatientId = data.Id,
+                    PatientName = data.Name,
+                    PatientLastName = data.LastName,
+                    Gender = data.Gender,
+                    Status = data.Status,
+                    StatusAssignment = statusAssignment // ✅ Campo agregado
+                };
+            }).ToList();
+
+            return Ok(result);
         }
         catch (Exception ex)
         {
