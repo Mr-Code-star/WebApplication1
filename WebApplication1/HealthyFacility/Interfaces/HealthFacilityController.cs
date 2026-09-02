@@ -185,35 +185,44 @@ public class HealthFacilityController : ControllerBase
     // 5. LISTAR POSTAS CERCANAS - SOLO MADRE
     // ==========================================
 
+    // En HealthFacilityController.cs - ListHealthFacilities
     [HttpGet("nearby")]
     [RequireRole("Mother")]
     public async Task<IActionResult> ListHealthFacilities([FromQuery] double lat, [FromQuery] double lng)
     {
         try
         {
+            Console.WriteLine($"📍 /nearby llamado: lat={lat}, lng={lng}");
+        
             var motherId = User.FindFirst("motherId")?.Value;
+            Console.WriteLine($"👤 MotherId: {motherId}");
 
             if (string.IsNullOrEmpty(motherId))
             {
                 return BadRequest(new { error = "Mother ID no encontrado en el token" });
             }
 
-            if (double.IsNaN(lat) || double.IsNaN(lng))
-            {
-                return BadRequest(new { error = "Both 'lat' and 'lng' query parameters are required" });
-            }
-
             var query = new ListHealthFacilitiesQuery(lat, lng, motherId);
             var result = await _facade.ListHealthFacilitiesAsync(query);
+        
+            Console.WriteLine($"📊 Postas encontradas: {(result as List<object>)?.Count ?? 0}");
+        
+            // ✅ Log de la primera posta para ver estructura
+            if (result is List<object> list && list.Count > 0)
+            {
+                var first = list[0];
+                Console.WriteLine($"📋 Primera posta: {System.Text.Json.JsonSerializer.Serialize(first)}");
+            }
 
             return Ok(result);
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
             return BadRequest(new { error = ex.Message });
         }
     }
-
     // ==========================================
     // 6. OBTENER DETALLE DE POSTA
     // ==========================================

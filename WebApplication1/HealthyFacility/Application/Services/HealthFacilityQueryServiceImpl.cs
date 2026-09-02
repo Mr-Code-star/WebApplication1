@@ -235,10 +235,19 @@ public class HealthFacilityQueryServiceImpl : IHealthyFacilityQueryService
                 data.Coordinates.Lng
             );
 
+            // ✅ CAMBIADO: Ahora devuelve un objeto plano con todos los campos
             result.Add(new
             {
-                facility,
-                distanceKm
+                id = data.Id,
+                name = data.Name,
+                address = data.Address,
+                latitude = data.Coordinates.Lat,
+                longitude = data.Coordinates.Lng,
+                phoneNumber = data.PhoneNumber,
+                services = data.Services,
+                availableDays = data.OperatingSchedule.AvailableDays,
+                distanceKm = distanceKm,
+                status = data.Status
             });
         }
 
