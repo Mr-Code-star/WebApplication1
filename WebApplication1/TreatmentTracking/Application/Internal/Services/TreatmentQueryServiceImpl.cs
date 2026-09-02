@@ -235,30 +235,54 @@ public class TreatmentQueryServiceImpl : ITreatmentQueryService
             treatments = await _treatmentRepository.FindAllActiveAsync();
         }
 
-        int high = 0, medium = 0, low = 0;
+        int highCount = 0;
+        int mediumCount = 0;
+        int lowCount = 0;
 
         foreach (var treatment in treatments)
         {
             var riskLevel = treatment.RiskScore.RiskLevel;
+        
             switch (riskLevel)
             {
-                case RiskLevel.HIGH: high++; break;
-                case RiskLevel.MEDIUM: medium++; break;
-                case RiskLevel.LOW: low++; break;
+                case RiskLevel.HIGH:
+                    highCount++;
+                    break;
+                case RiskLevel.MEDIUM:
+                    mediumCount++;
+                    break;
+                case RiskLevel.LOW:
+                    lowCount++;
+                    break;
             }
         }
 
-        return new
+        // Usar diccionario para forzar las claves en mayúsculas
+        var result = new Dictionary<string, object>
         {
-            summary = new
+            ["summary"] = new Dictionary<string, object>
             {
-                HIGH = new { count = high, description = "score mayor de 70" },
-                MEDIUM = new { count = medium, description = "score entre 30 y 70" },
-                LOW = new { count = low, description = "score menor de 30" },
-                total = treatments.Count
+                ["HIGH"] = new Dictionary<string, object>
+                {
+                    ["count"] = highCount,
+                    ["description"] = "score mayor de 70"
+                },
+                ["MEDIUM"] = new Dictionary<string, object>
+                {
+                    ["count"] = mediumCount,
+                    ["description"] = "score entre 30 y 70"
+                },
+                ["LOW"] = new Dictionary<string, object>
+                {
+                    ["count"] = lowCount,
+                    ["description"] = "score menor de 30"
+                },
+                ["total"] = treatments.Count
             }
         };
-    }
+
+        return result;
+    }    
 
     public async Task<object> GetTodayDoseAsync(GetTodayDoseQuery query)
     {
