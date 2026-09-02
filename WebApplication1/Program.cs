@@ -41,6 +41,7 @@ using WebApplication1.patient_management.Infrastructure.Persitencia.MongoDb.Repo
 using WebApplication1.patient_management.Interfaces.Facades;
 using WebApplication1.Services;
 using WebApplication1.shared.catalogs.Data;
+using WebApplication1.shared.infrastructure.config;
 using WebApplication1.shared.infrastructure.Events;
 using WebApplication1.TreatmentTracking.Application.Internal.Scheduling;
 using WebApplication1.TreatmentTracking.Application.Internal.Services;
@@ -303,6 +304,11 @@ builder.Services.AddCors(options =>
 //  CONSTRUIR APLICACIÓN
 // ==========================================
 var app = builder.Build();
+
+// ==========================================
+// ✅ INICIALIZAR DOSECONFIG CON LA CONFIGURACIÓN
+// ==========================================
+DoseConfig.Initialize(builder.Configuration);
 
 // ==========================================
 //  CONFIGURAR MIDDLEWARES - IMPORTANTE: ORDEN
