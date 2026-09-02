@@ -77,8 +77,11 @@ builder.Services.AddScoped<IMongoDatabase>(sp =>
 // ==========================================
 // ✅ 3. REGISTRAR EVENT PUBLISHER (SINGLETON)
 // ==========================================
-builder.Services.AddSingleton<EventPublisher>();
-
+builder.Services.AddSingleton<EventPublisher>(sp => 
+{
+    var logger = sp.GetRequiredService<ILogger<EventPublisher>>();
+    return new EventPublisher(logger);
+});
 // ==========================================
 // ✅ 3. CONFIGURAR AUTENTICACIÓN JWT
 // ==========================================
@@ -345,6 +348,111 @@ app.UseAuthorization();
 // ✅ Mapear Controladores
 app.MapControllers();
 
+// ==========================================
+// ✅ SUSCRIBIR EVENT HANDLERS DE ACHIEVEMENTS
+// ==========================================
+
+// Program.cs - En la sección de suscripción de eventos
+using (var scope = app.Services.CreateScope())
+{
+    var eventPublisher = scope.ServiceProvider.GetRequiredService<EventPublisher>();
+    var handlers = scope.ServiceProvider.GetRequiredService<TreatmentEventHandlers>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<TreatmentEventHandlers>>();
+
+    Console.WriteLine("==========================================");
+    Console.WriteLine("📢 SUSCRIBIENDO EVENT HANDLERS");
+    Console.WriteLine("==========================================");
+
+    // 1. Treatment Started
+    Console.WriteLine("[EventPublisher] Suscribiendo TreatmentStarted...");
+    eventPublisher.Subscribe<TreatmentStartedEvent>("TreatmentStarted", async (eventData) =>
+    {
+        try
+        {
+            Console.WriteLine($"[EventPublisher] 🔥 TreatmentStarted DISPARADO para: {eventData.TreatmentId}");
+            await handlers.OnTreatmentStartedAsync(eventData);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventPublisher] ❌ Error en TreatmentStarted: {ex.Message}");
+            Console.WriteLine($"[EventPublisher] StackTrace: {ex.StackTrace}");
+            logger.LogError(ex, "Error en TreatmentStarted handler");
+        }
+    });
+    Console.WriteLine("[EventPublisher] ✅ TreatmentStarted suscrito");
+
+    // 2. Daily Dose Confirmed
+    Console.WriteLine("[EventPublisher] Suscribiendo DailyDoseConfirmed...");
+    eventPublisher.Subscribe<DailyDoseConfirmedEvent>("DailyDoseConfirmed", async (eventData) =>
+    {
+        try
+        {
+            Console.WriteLine($"[EventPublisher] 🔥 DailyDoseConfirmed DISPARADO para: {eventData.TreatmentId}");
+            await handlers.OnDailyDoseConfirmedAsync(eventData);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventPublisher] ❌ Error en DailyDoseConfirmed: {ex.Message}");
+            logger.LogError(ex, "Error en DailyDoseConfirmed handler");
+        }
+    });
+    Console.WriteLine("[EventPublisher] ✅ DailyDoseConfirmed suscrito");
+
+    // 3. Daily Dose Omitted
+    Console.WriteLine("[EventPublisher] Suscribiendo DailyDoseOmitted...");
+    eventPublisher.Subscribe<DailyDoseOmittedEvent>("DailyDoseOmitted", async (eventData) =>
+    {
+        try
+        {
+            Console.WriteLine($"[EventPublisher] 🔥 DailyDoseOmitted DISPARADO para: {eventData.TreatmentId}");
+            await handlers.OnDailyDoseOmittedAsync(eventData);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventPublisher] ❌ Error en DailyDoseOmitted: {ex.Message}");
+            logger.LogError(ex, "Error en DailyDoseOmitted handler");
+        }
+    });
+    Console.WriteLine("[EventPublisher] ✅ DailyDoseOmitted suscrito");
+
+    // 4. Treatment Completed
+    Console.WriteLine("[EventPublisher] Suscribiendo TreatmentCompleted...");
+    eventPublisher.Subscribe<TreatmentCompletedEvent>("TreatmentCompleted", async (eventData) =>
+    {
+        try
+        {
+            Console.WriteLine($"[EventPublisher] 🔥 TreatmentCompleted DISPARADO para: {eventData.TreatmentId}");
+            await handlers.OnTreatmentCompletedAsync(eventData);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventPublisher] ❌ Error en TreatmentCompleted: {ex.Message}");
+            logger.LogError(ex, "Error en TreatmentCompleted handler");
+        }
+    });
+    Console.WriteLine("[EventPublisher] ✅ TreatmentCompleted suscrito");
+
+    // 5. Treatment Abandoned
+    Console.WriteLine("[EventPublisher] Suscribiendo TreatmentAbandoned...");
+    eventPublisher.Subscribe<TreatmentAbandonedEvent>("TreatmentAbandoned", async (eventData) =>
+    {
+        try
+        {
+            Console.WriteLine($"[EventPublisher] 🔥 TreatmentAbandoned DISPARADO para: {eventData.TreatmentId}");
+            await handlers.OnTreatmentAbandonedAsync(eventData);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EventPublisher] ❌ Error en TreatmentAbandoned: {ex.Message}");
+            logger.LogError(ex, "Error en TreatmentAbandoned handler");
+        }
+    });
+    Console.WriteLine("[EventPublisher] ✅ TreatmentAbandoned suscrito");
+
+    Console.WriteLine("==========================================");
+    Console.WriteLine("✅ ALL EVENT HANDLERS REGISTERED");
+    Console.WriteLine("==========================================");
+}
 // ==========================================
 // 9. INICIAR APLICACIÓN
 // ==========================================

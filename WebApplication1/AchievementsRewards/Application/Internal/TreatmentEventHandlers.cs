@@ -33,48 +33,64 @@ public class TreatmentEventHandlers
     /// </summary>
     public async Task OnTreatmentStartedAsync(TreatmentStartedEvent eventData)
     {
-        _logger.LogInformation("[Achievements] TreatmentStarted event received: {TreatmentId}", eventData.TreatmentId);
-
-        // Verificar si ya existe
-        var existing = await _achievementRepository.FindByTreatmentIdAsync(eventData.TreatmentId);
-        if (existing != null)
+        try
         {
-            _logger.LogInformation("[Achievements] Achievement already exists for {TreatmentId}", eventData.TreatmentId);
-            return;
-        }
+            _logger.LogInformation("[ACHIEVEMENTS] 🔥 Iniciando OnTreatmentStartedAsync");
+            _logger.LogInformation("[ACHIEVEMENTS] TreatmentId: {TreatmentId}", eventData.TreatmentId);
+            _logger.LogInformation("[ACHIEVEMENTS] PatientId: {PatientId}", eventData.PatientId);
+            _logger.LogInformation("[ACHIEVEMENTS] DurationDays: {DurationDays}", eventData.DurationDays);
 
-        // Crear Achievement
-        var achievementId = Guid.NewGuid().ToString();
-        var achievement = Achievement.Create(
-            achievementId,
-            eventData.PatientId,
-            eventData.MotherId,
-            eventData.TreatmentId,
-            eventData.DurationDays
-        );
+            // Verificar si ya existe
+            var existing = await _achievementRepository.FindByTreatmentIdAsync(eventData.TreatmentId);
+            if (existing != null)
+            {
+                _logger.LogInformation("[ACHIEVEMENTS] ✅ Achievement ya existe para {TreatmentId}", eventData.TreatmentId);
+                return;
+            }
 
-        await _achievementRepository.SaveAsync(achievement);
-        _logger.LogInformation("[Achievements] Achievement created: {AchievementId}", achievementId);
+            _logger.LogInformation("[ACHIEVEMENTS] Creando nuevo Achievement...");
 
-        // Crear Badges
-        var badgeTypes = MilestoneCalculator.GetBadgesForDuration(eventData.DurationDays);
-        var badges = new List<Badge>();
-
-        foreach (var type in badgeTypes)
-        {
-            var badge = Badge.Create(
-                Guid.NewGuid().ToString(),
+            // Crear Achievement
+            var achievementId = Guid.NewGuid().ToString();
+            var achievement = Achievement.Create(
                 achievementId,
-                type,
+                eventData.PatientId,
+                eventData.MotherId,
+                eventData.TreatmentId,
                 eventData.DurationDays
             );
-            badges.Add(badge);
+
+            await _achievementRepository.SaveAsync(achievement);
+            _logger.LogInformation("[ACHIEVEMENTS] ✅ Achievement creado: {AchievementId}", achievementId);
+
+            // Crear Badges
+            var badgeTypes = MilestoneCalculator.GetBadgesForDuration(eventData.DurationDays);
+            _logger.LogInformation("[ACHIEVEMENTS] Tipos de badges a crear: {Count}", badgeTypes.Count);
+            
+            var badges = new List<Badge>();
+
+            foreach (var type in badgeTypes)
+            {
+                var badge = Badge.Create(
+                    Guid.NewGuid().ToString(),
+                    achievementId,
+                    type,
+                    eventData.DurationDays
+                );
+                badges.Add(badge);
+                _logger.LogInformation("[ACHIEVEMENTS] Badge creado: {Type} - Milestone: {Milestone}", 
+                    type.ToStringValue(), badge.Milestone);
+            }
+
+            await _badgeRepository.SaveManyAsync(badges);
+            _logger.LogInformation("[ACHIEVEMENTS] ✅ {Count} badges creados", badges.Count);
         }
-
-        await _badgeRepository.SaveManyAsync(badges);
-        _logger.LogInformation("[Achievements] {Count} badges created", badges.Count);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ACHIEVEMENTS] ❌ ERROR en OnTreatmentStartedAsync");
+            throw;
+        }
     }
-
     /// <summary>
     /// Cuando se confirma una dosis: actualizar racha y puntos
     /// </summary>

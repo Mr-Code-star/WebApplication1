@@ -22,129 +22,159 @@ public class MongoBadgeRepository : IBadgeRepository
 
     public async Task SaveAsync(Badge badge)
     {
-        var data = BadgeMapper.ToPersistence(badge);
-        
-        var document = new BadgeDocument
+        try
         {
-            BadgeId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-            AchievementId = (string)data.GetType().GetProperty("achievementId")?.GetValue(data, null)!,
-            Type = (string)data.GetType().GetProperty("type")?.GetValue(data, null)!,
-            Name = (string)data.GetType().GetProperty("name")?.GetValue(data, null)!,
-            Description = (string)data.GetType().GetProperty("description")?.GetValue(data, null)!,
-            Milestone = (int)data.GetType().GetProperty("milestone")?.GetValue(data, null)!,
-            IsUnlocked = (bool)data.GetType().GetProperty("isUnlocked")?.GetValue(data, null)!,
-            UnlockedAt = (DateTime?)data.GetType().GetProperty("unlockedAt")?.GetValue(data, null),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        await _collection.InsertOneAsync(document);
-        _logger.LogInformation("Badge guardado: {BadgeId}", document.BadgeId);
+            var document = BadgeMapper.ToPersistence(badge);
+            await _collection.InsertOneAsync(document);
+            _logger.LogInformation("✅ Badge guardado: {BadgeId}", document.BadgeId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error guardando Badge");
+            throw;
+        }
     }
 
     public async Task SaveManyAsync(List<Badge> badges)
     {
-        var documents = badges.Select(b =>
+        try
         {
-            var data = BadgeMapper.ToPersistence(b);
-            return new BadgeDocument
-            {
-                BadgeId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!,
-                AchievementId = (string)data.GetType().GetProperty("achievementId")?.GetValue(data, null)!,
-                Type = (string)data.GetType().GetProperty("type")?.GetValue(data, null)!,
-                Name = (string)data.GetType().GetProperty("name")?.GetValue(data, null)!,
-                Description = (string)data.GetType().GetProperty("description")?.GetValue(data, null)!,
-                Milestone = (int)data.GetType().GetProperty("milestone")?.GetValue(data, null)!,
-                IsUnlocked = (bool)data.GetType().GetProperty("isUnlocked")?.GetValue(data, null)!,
-                UnlockedAt = (DateTime?)data.GetType().GetProperty("unlockedAt")?.GetValue(data, null),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-        }).ToList();
-
-        await _collection.InsertManyAsync(documents);
-        _logger.LogInformation("{Count} badges guardados", documents.Count);
+            var documents = badges.Select(BadgeMapper.ToPersistence).ToList();
+            await _collection.InsertManyAsync(documents);
+            _logger.LogInformation("✅ {Count} badges guardados", documents.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error guardando múltiples badges");
+            throw;
+        }
     }
 
     public async Task UpdateAsync(Badge badge)
     {
-        var data = BadgeMapper.ToPersistence(badge);
-        var badgeId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!;
+        try
+        {
+            var document = BadgeMapper.ToPersistence(badge);
+            
+            var filter = Builders<BadgeDocument>.Filter.Eq(x => x.BadgeId, document.BadgeId);
+            
+            var update = Builders<BadgeDocument>.Update
+                .Set(x => x.AchievementId, document.AchievementId)
+                .Set(x => x.Type, document.Type)
+                .Set(x => x.Name, document.Name)
+                .Set(x => x.Description, document.Description)
+                .Set(x => x.Milestone, document.Milestone)
+                .Set(x => x.IsUnlocked, document.IsUnlocked)
+                .Set(x => x.UnlockedAt, document.UnlockedAt)
+                .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
-        var filter = Builders<BadgeDocument>.Filter.Eq(x => x.BadgeId, badgeId);
-
-        var update = Builders<BadgeDocument>.Update
-            .Set(x => x.AchievementId, (string)data.GetType().GetProperty("achievementId")?.GetValue(data, null)!)
-            .Set(x => x.Type, (string)data.GetType().GetProperty("type")?.GetValue(data, null)!)
-            .Set(x => x.Name, (string)data.GetType().GetProperty("name")?.GetValue(data, null)!)
-            .Set(x => x.Description, (string)data.GetType().GetProperty("description")?.GetValue(data, null)!)
-            .Set(x => x.Milestone, (int)data.GetType().GetProperty("milestone")?.GetValue(data, null)!)
-            .Set(x => x.IsUnlocked, (bool)data.GetType().GetProperty("isUnlocked")?.GetValue(data, null)!)
-            .Set(x => x.UnlockedAt, (DateTime?)data.GetType().GetProperty("unlockedAt")?.GetValue(data, null))
-            .Set(x => x.UpdatedAt, DateTime.UtcNow);
-
-        await _collection.UpdateOneAsync(filter, update);
-        _logger.LogInformation("Badge actualizado: {BadgeId}", badgeId);
+            await _collection.UpdateOneAsync(filter, update);
+            _logger.LogInformation("✅ Badge actualizado: {BadgeId}", document.BadgeId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error actualizando Badge");
+            throw;
+        }
     }
 
     public async Task UpdateManyAsync(List<Badge> badges)
     {
-        var bulkOps = badges.Select(badge =>
+        try
         {
-            var data = BadgeMapper.ToPersistence(badge);
-            var badgeId = (string)data.GetType().GetProperty("id")?.GetValue(data, null)!;
+            var bulkOps = badges.Select(badge =>
+            {
+                var document = BadgeMapper.ToPersistence(badge);
+                
+                var update = Builders<BadgeDocument>.Update
+                    .Set(x => x.IsUnlocked, document.IsUnlocked)
+                    .Set(x => x.UnlockedAt, document.UnlockedAt)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
-            var update = Builders<BadgeDocument>.Update
-                .Set(x => x.IsUnlocked, (bool)data.GetType().GetProperty("isUnlocked")?.GetValue(data, null)!)
-                .Set(x => x.UnlockedAt, (DateTime?)data.GetType().GetProperty("unlockedAt")?.GetValue(data, null))
-                .Set(x => x.UpdatedAt, DateTime.UtcNow);
+                return new UpdateOneModel<BadgeDocument>(
+                    Builders<BadgeDocument>.Filter.Eq(x => x.BadgeId, document.BadgeId),
+                    update
+                );
+            }).ToList();
 
-            return new UpdateOneModel<BadgeDocument>(
-                Builders<BadgeDocument>.Filter.Eq(x => x.BadgeId, badgeId),
-                update
-            );
-        }).ToList();
-
-        await _collection.BulkWriteAsync(bulkOps);
-        _logger.LogInformation("{Count} badges actualizados", badges.Count);
+            await _collection.BulkWriteAsync(bulkOps);
+            _logger.LogInformation("✅ {Count} badges actualizados", badges.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error actualizando múltiples badges");
+            throw;
+        }
     }
 
     public async Task<Badge?> FindByIdAsync(string id)
     {
-        var filter = Builders<BadgeDocument>.Filter.Eq(x => x.BadgeId, id);
-        var document = await _collection.Find(filter).FirstOrDefaultAsync();
+        try
+        {
+            var filter = Builders<BadgeDocument>.Filter.Eq(x => x.BadgeId, id);
+            var document = await _collection.Find(filter).FirstOrDefaultAsync();
 
-        if (document == null) return null;
+            if (document == null) return null;
 
-        return BadgeMapper.ToDomain(document);
+            return BadgeMapper.ToDomain(document);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error buscando Badge por ID: {Id}", id);
+            throw;
+        }
     }
 
     public async Task<List<Badge>> FindByAchievementIdAsync(string achievementId)
     {
-        var filter = Builders<BadgeDocument>.Filter.Eq(x => x.AchievementId, achievementId);
-        var documents = await _collection.Find(filter).ToListAsync();
+        try
+        {
+            var filter = Builders<BadgeDocument>.Filter.Eq(x => x.AchievementId, achievementId);
+            var documents = await _collection.Find(filter).ToListAsync();
 
-        return documents.Select(BadgeMapper.ToDomain).ToList();
+            return documents.Select(BadgeMapper.ToDomain).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error buscando Badges por AchievementId: {AchievementId}", achievementId);
+            throw;
+        }
     }
 
     public async Task<Badge?> FindByAchievementIdAndTypeAsync(string achievementId, BadgeType type)
     {
-        var filter = Builders<BadgeDocument>.Filter.And(
-            Builders<BadgeDocument>.Filter.Eq(x => x.AchievementId, achievementId),
-            Builders<BadgeDocument>.Filter.Eq(x => x.Type, type.ToStringValue())
-        );
+        try
+        {
+            var filter = Builders<BadgeDocument>.Filter.And(
+                Builders<BadgeDocument>.Filter.Eq(x => x.AchievementId, achievementId),
+                Builders<BadgeDocument>.Filter.Eq(x => x.Type, type.ToStringValue())
+            );
 
-        var document = await _collection.Find(filter).FirstOrDefaultAsync();
+            var document = await _collection.Find(filter).FirstOrDefaultAsync();
 
-        if (document == null) return null;
+            if (document == null) return null;
 
-        return BadgeMapper.ToDomain(document);
+            return BadgeMapper.ToDomain(document);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error buscando Badge por AchievementId y Type");
+            throw;
+        }
     }
 
     public async Task DeleteByAchievementIdAsync(string achievementId)
     {
-        var filter = Builders<BadgeDocument>.Filter.Eq(x => x.AchievementId, achievementId);
-        await _collection.DeleteManyAsync(filter);
-        _logger.LogInformation("Badges eliminados para achievement: {AchievementId}", achievementId);
+        try
+        {
+            var filter = Builders<BadgeDocument>.Filter.Eq(x => x.AchievementId, achievementId);
+            await _collection.DeleteManyAsync(filter);
+            _logger.LogInformation("✅ Badges eliminados para achievement: {AchievementId}", achievementId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error eliminando badges por AchievementId: {AchievementId}", achievementId);
+            throw;
+        }
     }
 }

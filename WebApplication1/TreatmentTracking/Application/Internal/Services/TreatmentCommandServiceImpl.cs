@@ -1,4 +1,5 @@
-﻿using WebApplication1.AchievementsRewards.Domain.Repositories;
+﻿using WebApplication1.AchievementsRewards.Application.Internal;
+using WebApplication1.AchievementsRewards.Domain.Repositories;
 using WebApplication1.patient_management.Domain.Repositories;
 using WebApplication1.shared.infrastructure.Events;
 using WebApplication1.TreatmentTracking.Domain.Model.Aggregate;
@@ -125,15 +126,12 @@ public class TreatmentCommandServiceImpl : ITreatmentCommandService
         var patientData = patient.ToPrimitives();
 
         // Publicar evento para Achievements
-        await _eventPublisher.PublishAsync("TreatmentStarted", new
+        await _eventPublisher.PublishAsync("TreatmentStarted", new TreatmentStartedEvent
         {
-            treatmentId = newTreatment.Id,
-            patientId = command.PatientId,
-            motherId = patientData.MotherId,
-            nurseId = command.NurseId,
-            durationDays = command.DurationDays,
-            startDate = startDate,
-            endDate = endDate
+            TreatmentId = newTreatment.Id,
+            PatientId = command.PatientId,
+            MotherId = patientData.MotherId,
+            DurationDays = command.DurationDays
         });
 
         return new
@@ -201,11 +199,11 @@ public class TreatmentCommandServiceImpl : ITreatmentCommandService
         await _treatmentRepository.UpdateAsync(activeTreatment);
 
         // 9. Publicar evento para Achievements
-        await _eventPublisher.PublishAsync("DailyDoseConfirmed", new
+        await _eventPublisher.PublishAsync("DailyDoseConfirmed", new DailyDoseConfirmedEvent
         {
-            treatmentId = activeTreatment.Id,
-            patientId = command.PatientId,
-            dailyDoseId = todayDose.Id
+            TreatmentId = activeTreatment.Id,
+            PatientId = command.PatientId,
+            DailyDoseId = todayDose.Id
         });
 
         return new
@@ -228,9 +226,9 @@ public class TreatmentCommandServiceImpl : ITreatmentCommandService
 
         await _treatmentRepository.UpdateAsync(treatment);
 
-        await _eventPublisher.PublishAsync("TreatmentCompleted", new
+        await _eventPublisher.PublishAsync("TreatmentCompleted", new TreatmentCompletedEvent
         {
-            treatmentId = command.TreatmentId
+            TreatmentId = command.TreatmentId
         });
 
         return new
@@ -255,9 +253,9 @@ public class TreatmentCommandServiceImpl : ITreatmentCommandService
 
         await _treatmentRepository.UpdateAsync(treatment);
 
-        await _eventPublisher.PublishAsync("TreatmentAbandoned", new
+        await _eventPublisher.PublishAsync("TreatmentAbandoned", new TreatmentAbandonedEvent
         {
-            treatmentId = command.TreatmentId
+            TreatmentId = command.TreatmentId
         });
 
         return new
@@ -309,10 +307,10 @@ public class TreatmentCommandServiceImpl : ITreatmentCommandService
         await _dailyDoseRepository.UpdateAsync(dose);
         await _treatmentRepository.UpdateAsync(treatment);
 
-        await _eventPublisher.PublishAsync("DailyDoseOmitted", new
+        await _eventPublisher.PublishAsync("DailyDoseOmitted", new DailyDoseOmittedEvent
         {
-            treatmentId = treatment.Id,
-            dailyDoseId = dose.Id
+            TreatmentId = treatment.Id,
+            DailyDoseId = dose.Id
         });
 
         return new

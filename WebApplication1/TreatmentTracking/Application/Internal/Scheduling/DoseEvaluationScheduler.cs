@@ -1,4 +1,5 @@
-﻿using WebApplication1.shared.infrastructure.config;
+﻿using WebApplication1.AchievementsRewards.Application.Internal;
+using WebApplication1.shared.infrastructure.config;
 using WebApplication1.shared.infrastructure.Events;
 using WebApplication1.TreatmentTracking.Domain.Model.Aggregate;
 using WebApplication1.TreatmentTracking.Domain.Model.Entities;
@@ -103,10 +104,10 @@ public class DoseEvaluationScheduler : BackgroundService
                     await dailyDoseRepository.UpdateAsync(dose);
 
                     // Publicar evento para Achievements
-                    await eventPublisher.PublishAsync("DailyDoseOmitted", new
+                    await eventPublisher.PublishAsync("DailyDoseOmitted", new DailyDoseOmittedEvent
                     {
-                        treatmentId = treatment.Id,
-                        dailyDoseId = dose.Id
+                        TreatmentId = treatment.Id,
+                        DailyDoseId = dose.Id
                     });
 
                     // Actualizar métricas del tratamiento
