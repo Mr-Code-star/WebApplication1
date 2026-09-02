@@ -7,30 +7,33 @@ public static class ConsultationMapper
 {
     public static Domain.Models.Aggregate.Consultation ToDomain(dynamic document)
     {
-        var messages = ((IEnumerable<dynamic>)document.messages ?? Enumerable.Empty<dynamic>())
+        // ✅ Usar "ConsultationId" (con mayúscula) como viene del documento
+        string id = document.ConsultationId ?? document.id;
+        
+        if (string.IsNullOrEmpty(id))
+        {
+            throw new ArgumentException("Document must have an id");
+        }
+
+        var messages = ((IEnumerable<dynamic>)document.Messages ?? Enumerable.Empty<dynamic>())
             .Select((dynamic message) =>
                 new Message(
-                    message.id,
-                    message.senderId,
-                    MessageSenderExtensions.FromString(message.senderRole),
-                    message.content,
-                    message.sentAt
+                    (string)message.Id,
+                    (string)message.SenderId,
+                    MessageSenderExtensions.FromString((string)message.SenderRole),
+                    (string)message.Content,
+                    (DateTime)message.SentAt
                 )
             ).ToList();
 
         return new Domain.Models.Aggregate.Consultation(
-            document.id,
-            document.patientId,
-            document.motherId,
-            document.nurseId,
+            id,
+            (string)document.PatientId,
+            (string)document.MotherId,
+            (string)document.NurseId,
             messages,
-            document.createdAt,
-            document.closedAt
+            (DateTime)document.CreatedAt,
+            document.ClosedAt != null ? (DateTime?)document.ClosedAt : null
         );
-    }
-
-    public static object ToPersistence(Domain.Models.Aggregate.Consultation consultation)
-    {
-        return consultation.ToPrimitives();
     }
 }

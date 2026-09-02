@@ -1,4 +1,4 @@
-﻿using WebApplication1.Consultation.Domain.Repositories;
+﻿﻿using WebApplication1.Consultation.Domain.Repositories;
 using WebApplication1.Consultation.Infrastructure.Mappers;
 using WebApplication1.Consultation.Infrastructure.Persitencia.MongoDb.Models;
 
@@ -21,25 +21,25 @@ public class MongoConsultationRepository : IConsultationRepository
 
     public async Task SaveAsync(Domain.Models.Aggregate.Consultation consultation)
     {
-        var data = ConsultationMapper.ToPersistence(consultation);
+        var data = consultation.ToPrimitives();
 
         var document = new ConsultationDocument
         {
-            ConsultationId = (string)data.GetType().GetProperty("Id")?.GetValue(data, null)!,
-            PatientId = (string)data.GetType().GetProperty("PatientId")?.GetValue(data, null)!,
-            MotherId = (string)data.GetType().GetProperty("MotherId")?.GetValue(data, null)!,
-            NurseId = (string)data.GetType().GetProperty("NurseId")?.GetValue(data, null)!,
-            CreatedAt = (DateTime)data.GetType().GetProperty("CreatedAt")?.GetValue(data, null)!,
-            ClosedAt = (DateTime?)data.GetType().GetProperty("ClosedAt")?.GetValue(data, null),
-            Messages = ((IEnumerable<dynamic>)data.GetType().GetProperty("Messages")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
-                .Select(m => new MessageDocument
-                {
-                    Id = m.Id,
-                    SenderId = m.SenderId,
-                    SenderRole = m.SenderRole,
-                    Content = m.Content,
-                    SentAt = m.SentAt
-                }).ToList()
+            ConsultationId = data.Id,
+            PatientId = data.PatientId,
+            MotherId = data.MotherId,
+            NurseId = data.NurseId,
+            CreatedAt = data.CreatedAt,
+            ClosedAt = data.ClosedAt,
+            Messages = data.Messages.Select(m => new MessageDocument
+            {
+                Id = m.Id,
+                SenderId = m.SenderId,
+                SenderRole = m.SenderRole,
+                Content = m.Content,
+                SentAt = m.SentAt
+            }).ToList(),
+            UpdatedAt = DateTime.UtcNow
         };
 
         await _collection.InsertOneAsync(document);
@@ -48,24 +48,23 @@ public class MongoConsultationRepository : IConsultationRepository
 
     public async Task UpdateAsync(Domain.Models.Aggregate.Consultation consultation)
     {
-        var data = ConsultationMapper.ToPersistence(consultation);
-        var consultationId = (string)data.GetType().GetProperty("Id")?.GetValue(data, null)!;
+        var data = consultation.ToPrimitives();
+        var consultationId = data.Id;
 
         var filter = Builders<ConsultationDocument>.Filter.Eq(x => x.ConsultationId, consultationId);
 
-        var messages = ((IEnumerable<dynamic>)data.GetType().GetProperty("Messages")?.GetValue(data, null) ?? Enumerable.Empty<dynamic>())
-            .Select(m => new MessageDocument
-            {
-                Id = m.Id,
-                SenderId = m.SenderId,
-                SenderRole = m.SenderRole,
-                Content = m.Content,
-                SentAt = m.SentAt
-            }).ToList();
+        var messages = data.Messages.Select(m => new MessageDocument
+        {
+            Id = m.Id,
+            SenderId = m.SenderId,
+            SenderRole = m.SenderRole,
+            Content = m.Content,
+            SentAt = m.SentAt
+        }).ToList();
 
         var update = Builders<ConsultationDocument>.Update
             .Set(x => x.Messages, messages)
-            .Set(x => x.ClosedAt, (DateTime?)data.GetType().GetProperty("ClosedAt")?.GetValue(data, null))
+            .Set(x => x.ClosedAt, data.ClosedAt)
             .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await _collection.UpdateOneAsync(filter, update);
@@ -84,7 +83,10 @@ public class MongoConsultationRepository : IConsultationRepository
 
     public async Task<List<Domain.Models.Aggregate.Consultation>> FindOpenByMotherIdAsync(string motherId)
     {
-        var filter = Builders<ConsultationDocument>.Filter.Eq(x => x.MotherId, motherId);
+        var filter = Builders<ConsultationDocument>.Filter.And(
+            Builders<ConsultationDocument>.Filter.Eq(x => x.MotherId, motherId),
+            Builders<ConsultationDocument>.Filter.Eq(x => x.ClosedAt, null)
+        );
         var documents = await _collection.Find(filter).ToListAsync();
 
         return documents.Select(ConsultationMapper.ToDomain).ToList();
@@ -92,7 +94,10 @@ public class MongoConsultationRepository : IConsultationRepository
 
     public async Task<List<Domain.Models.Aggregate.Consultation>> FindOpenByNurseIdAsync(string nurseId)
     {
-        var filter = Builders<ConsultationDocument>.Filter.Eq(x => x.NurseId, nurseId);
+        var filter = Builders<ConsultationDocument>.Filter.And(
+            Builders<ConsultationDocument>.Filter.Eq(x => x.NurseId, nurseId),
+            Builders<ConsultationDocument>.Filter.Eq(x => x.ClosedAt, null)
+        );
         var documents = await _collection.Find(filter).ToListAsync();
 
         return documents.Select(ConsultationMapper.ToDomain).ToList();
@@ -100,7 +105,10 @@ public class MongoConsultationRepository : IConsultationRepository
 
     public async Task<Domain.Models.Aggregate.Consultation?> FindOpenByPatientIdAsync(string patientId)
     {
-        var filter = Builders<ConsultationDocument>.Filter.Eq(x => x.PatientId, patientId);
+        var filter = Builders<ConsultationDocument>.Filter.And(
+            Builders<ConsultationDocument>.Filter.Eq(x => x.PatientId, patientId),
+            Builders<ConsultationDocument>.Filter.Eq(x => x.ClosedAt, null)
+        );
         var document = await _collection.Find(filter).FirstOrDefaultAsync();
 
         if (document == null) return null;

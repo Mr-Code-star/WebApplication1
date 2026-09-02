@@ -86,7 +86,8 @@ public class Consultation
             NurseId = NurseId,
             Messages = Messages.Select(m => m.ToPrimitives()).ToList(),
             CreatedAt = CreatedAt,
-            ClosedAt = ClosedAt
+            ClosedAt = ClosedAt,
+            IsOpen = IsOpen()  // ✅ Incluir IsOpen en los primitivos
         };
     }
 
@@ -99,5 +100,6 @@ public class Consultation
         public List<Message.MessagePrimitives> Messages { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public DateTime? ClosedAt { get; set; }
+        public bool IsOpen { get; set; }  // ✅ Nuevo campo
     }
 }

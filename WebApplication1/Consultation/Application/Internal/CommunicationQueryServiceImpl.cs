@@ -1,4 +1,4 @@
-﻿using WebApplication1.Consultation.Domain.Models.Queries;
+﻿﻿using WebApplication1.Consultation.Domain.Models.Queries;
 using WebApplication1.Consultation.Domain.Repositories;
 using WebApplication1.Consultation.Domain.Servicies;
 using WebApplication1.Contexts.IAM.Domain.Repositories;
@@ -104,12 +104,34 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
 
         var sortedMessages = data.Messages.OrderBy(m => m.SentAt).ToList();
 
+        // Obtener datos del paciente y enfermera para enriquecer la respuesta
+        var patient = await _patientRepository.FindByIdAsync(data.PatientId);
+        var patientData = patient?.ToPrimitives();
+
+        var nurse = await _userRepository.FindNurseByIdAsync(data.NurseId);
+        var nurseData = nurse?.ToPrimitives();
+
+        // ✅ Formatear respuesta como espera el frontend Kotlin
         return new
         {
-            consultationId = data.Id,
+            id = data.Id,
             patientId = data.PatientId,
-            nurseId = data.NurseId,
-            messages = sortedMessages
+            patientName = patientData != null ? $"{patientData.Name} {patientData.LastName}".Trim() : "Unknown",
+            nurse = new
+            {
+                id = data.NurseId,
+                name = nurseData?.Name ?? "Unknown",
+                specialty = "Enfermera asignada"
+            },
+            isOpen = consultation.IsOpen(),
+            messages = sortedMessages.Select(msg => new
+            {
+                id = msg.Id,
+                text = msg.Content,
+                // ✅ CORREGIDO: comparar string con string (NURSE en mayúsculas)
+                isFromNurse = msg.SenderRole == "NURSE",
+                time = msg.SentAt.ToString("HH:mm")
+            }).ToList()
         };
     }
 
@@ -127,10 +149,6 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
             var patient = await _patientRepository.FindByIdAsync(consultationData.PatientId);
             var patientData = patient?.ToPrimitives();
 
-            // Obtener datos de la madre
-            var mother = await _userRepository.FindMotherByIdAsync(consultationData.MotherId);
-            var motherData = mother?.ToPrimitives();
-
             // Obtener datos de la enfermera
             var nurse = await _userRepository.FindNurseByIdAsync(consultationData.NurseId);
             var nurseData = nurse?.ToPrimitives();
@@ -139,15 +157,15 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
             var messages = consultationData.Messages;
             var lastMessage = messages.Count > 0 ? messages.Last() : null;
 
+            // ✅ Formato CORRECTO que espera el frontend
             enrichedConsultations.Add(new
             {
-                consultationId = consultationData.Id,
+                consultationId = consultationData.Id,  // ← ¡IMPORTANTE! "consultationId" NO "id"
                 patientId = consultationData.PatientId,
                 patientName = patientData != null ? $"{patientData.Name} {patientData.LastName}".Trim() : "Unknown",
-                motherId = consultationData.MotherId,
-                motherName = motherData?.Name ?? "Unknown",
-                nurseId = consultationData.NurseId,
-                nurseName = nurseData?.Name ?? "Unknown",
+                nurseId = consultationData.NurseId,    // ← ¡IMPORTANTE! "nurseId" separado
+                nurseName = nurseData?.Name ?? "Unknown",  // ← ¡IMPORTANTE! "nurseName" separado
+                // ✅ También incluir los campos que el mapper puede usar
                 lastMessage = lastMessage?.Content,
                 lastMessageDate = lastMessage?.SentAt,
                 lastMessageSenderRole = lastMessage?.SenderRole,
@@ -158,27 +176,21 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
 
         return enrichedConsultations;
     }
-
     public async Task<object> GetOpenConsultationsByNurseAsync(GetOpenConsultationsByNurseQuery query)
     {
-        // 1️⃣ Obtener las consultas activas del enfermero
         var consultations = await _consultationRepository.FindOpenByNurseIdAsync(query.NurseId);
 
-        // 2️⃣ Obtener los pacientes asignados al enfermero
         var assignedPatients = await _patientRepository.FindByNurseIdAsync(query.NurseId);
 
-        // 3️⃣ Enriquecer cada consulta con datos del paciente y la madre
         var enrichedConsultations = new List<object>();
 
         foreach (var consultation in consultations)
         {
             var consultationData = consultation.ToPrimitives();
 
-            // Obtener datos del paciente
             var patient = await _patientRepository.FindByIdAsync(consultationData.PatientId);
             var patientData = patient?.ToPrimitives();
 
-            // Obtener datos de la madre
             var mother = await _userRepository.FindMotherByIdAsync(consultationData.MotherId);
             var motherData = mother?.ToPrimitives();
 
@@ -200,11 +212,9 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
             });
         }
 
-        // 4️⃣ Determinar escenarios base
         var hasAssignedPatients = assignedPatients.Count > 0;
         var hasConsultations = consultations.Count > 0;
 
-        // ✅ Escenario 1: NO tiene pacientes asignados
         if (!hasAssignedPatients)
         {
             return new
@@ -217,7 +227,6 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
             };
         }
 
-        // ✅ Escenario 2: Tiene pacientes pero NO tiene consultas
         if (!hasConsultations)
         {
             return new
@@ -229,12 +238,10 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
             };
         }
 
-        // ✅ Escenario 3: Tiene consultas → Aplicar filtro de búsqueda
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
             var searchLower = query.SearchTerm.ToLower().Trim();
 
-            // Filtrar por nombre del paciente o nombre de la madre
             var filteredConsultations = enrichedConsultations
                 .Where(c =>
                 {
@@ -245,7 +252,6 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
                 })
                 .ToList();
 
-            // Si después del filtro no hay resultados → BÚSQUEDA SIN RESULTADOS
             if (filteredConsultations.Count == 0)
             {
                 return new
@@ -261,7 +267,6 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
             return filteredConsultations;
         }
 
-        // ✅ Escenario 4: Tiene consultas y NO hay búsqueda → devolver todas
         return enrichedConsultations;
     }
 
@@ -291,6 +296,13 @@ public class CommunicationQueryServiceImpl : ICommunicationQueryService
             .Take(limit)
             .ToList();
 
-        return filteredMessages;
+        // ✅ CORREGIDO: comparar string con string (NURSE en mayúsculas)
+        return filteredMessages.Select(msg => new
+        {
+            id = msg.Id,
+            text = msg.Content,
+            isFromNurse = msg.SenderRole == "NURSE",
+            time = msg.SentAt.ToString("HH:mm")
+        }).ToList();
     }
 }

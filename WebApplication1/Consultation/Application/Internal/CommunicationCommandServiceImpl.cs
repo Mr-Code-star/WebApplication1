@@ -1,4 +1,4 @@
-﻿using WebApplication1.Consultation.Domain.Models.Commands;
+﻿﻿using WebApplication1.Consultation.Domain.Models.Commands;
 using WebApplication1.Consultation.Domain.Models.Entities;
 using WebApplication1.Consultation.Domain.Models.Enum;
 using WebApplication1.Consultation.Domain.Repositories;
@@ -34,6 +34,20 @@ public class CommunicationCommandServiceImpl : ICommunicationCommandService
             throw new Exception("Consultation not found");
         }
 
+        // ✅ Verificar que la consulta está abierta
+        if (!consultation.IsOpen())
+        {
+            throw new Exception("Consultation is closed");
+        }
+
+        var data = consultation.ToPrimitives();
+        
+        // ✅ Verificar que el remitente es parte de la consulta
+        if (command.SenderId != data.MotherId && command.SenderId != data.NurseId)
+        {
+            throw new Exception("Sender is not part of this consultation");
+        }
+
         var message = new Message(
             Guid.NewGuid().ToString(),
             command.SenderId,
@@ -48,6 +62,7 @@ public class CommunicationCommandServiceImpl : ICommunicationCommandService
 
         return new
         {
+            messageId = message.Id,
             message = "Message sent successfully"
         };
     }
@@ -77,7 +92,13 @@ public class CommunicationCommandServiceImpl : ICommunicationCommandService
 
         if (existingConsultation != null)
         {
-            throw new Exception("There is already an active consultation for this patient");
+            // ✅ Si ya existe, devolver su ID para que el frontend redirija
+            return new
+            {
+                consultationId = existingConsultation.Id,
+                message = "Active consultation already exists for this patient",
+                redirect = true
+            };
         }
 
         var firstMessage = new Message(
@@ -123,14 +144,16 @@ public class CommunicationCommandServiceImpl : ICommunicationCommandService
             throw new Exception("Only assigned nurse can close consultation");
         }
 
-        var nurseMessages = data.Messages.Where(m => m.SenderRole == MessageSender.NURSE.ToStringValue()).ToList();
+        var nurseMessages = data.Messages.Where(m => m.SenderRole == "NURSE").ToList();
 
         if (nurseMessages.Count == 0)
         {
             throw new Exception("Consultation must contain at least one nurse response before closing");
         }
 
-        await _consultationRepository.DeleteAsync(command.ConsultationId);
+        // ✅ Marcar como cerrada en lugar de eliminar
+        consultation.Close();
+        await _consultationRepository.UpdateAsync(consultation);
 
         return new
         {
